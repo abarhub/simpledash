@@ -1,7 +1,8 @@
 export default {
   id: 'joke',
   name: 'Blague (appel distant)',
-  description: 'Récupère une blague via une API publique (démo d\'appel réseau)',
+  description: "Récupère une blague via une API publique (démo d'appel réseau)",
+  compatibleTypes: ['local'],
 
   async fetch() {
     const res = await fetch('https://icanhazdadjoke.com/', {
@@ -13,7 +14,7 @@ export default {
     const json = await res.json();
     return [
       {
-        id: 'joke-random',
+        id: 'random',
         title: 'Blague du moment',
         data: { Blague: json.joke },
       },

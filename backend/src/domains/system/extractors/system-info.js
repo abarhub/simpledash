@@ -11,9 +11,10 @@ function formatDuration(seconds) {
 }
 
 export default {
-  id: 'system',
+  id: 'system-info',
   name: 'Infos système',
-  description: 'Mémoire, CPU et uptime (une sélection => plusieurs cards)',
+  description: 'Mémoire, CPU et uptime (une ressource => plusieurs cards)',
+  compatibleTypes: ['local'],
 
   async fetch() {
     const totalMem = os.totalmem();
@@ -22,7 +23,7 @@ export default {
 
     return [
       {
-        id: 'system-memory',
+        id: 'memory',
         title: 'Mémoire',
         data: {
           Totale: formatBytes(totalMem),
@@ -31,7 +32,7 @@ export default {
         },
       },
       {
-        id: 'system-cpu',
+        id: 'cpu',
         title: 'CPU',
         data: {
           Modèle: cpus[0]?.model ?? 'inconnu',
@@ -40,7 +41,7 @@ export default {
         },
       },
       {
-        id: 'system-uptime',
+        id: 'uptime',
         title: 'Uptime',
         data: {
           Système: formatDuration(os.uptime()),
