@@ -1,21 +1,75 @@
 import { useEffect, useState } from 'react';
+import DomainTabs from './components/DomainTabs';
+import ResourcePicker from './components/ResourcePicker';
+import ExtractorPicker from './components/ExtractorPicker';
 import Card from './components/Card';
-import { fetchProviders, fetchWidgets } from './api';
+import { fetchDomains, fetchResources, fetchExtractors, fetchWidgets } from './api';
 import './App.css';
 
 function App() {
-  const [providers, setProviders] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [domains, setDomains] = useState([]);
+  const [domainId, setDomainId] = useState(null);
+
+  const [resources, setResources] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [selectedResourceIds, setSelectedResourceIds] = useState([]);
+
+  const [extractors, setExtractors] = useState([]);
+  const [selectedExtractorIds, setSelectedExtractorIds] = useState([]);
+
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [refreshingId, setRefreshingId] = useState(null);
+  const [refreshingKey, setRefreshingKey] = useState(null);
 
   useEffect(() => {
-    fetchProviders().then(setProviders);
+    fetchDomains().then((list) => {
+      setDomains(list);
+      if (list.length > 0) setDomainId(list[0].id);
+    });
   }, []);
 
-  function toggleProvider(id) {
-    setSelectedIds((prev) =>
+  useEffect(() => {
+    if (!domainId) return;
+    setSelectedResourceIds([]);
+    setExtractors([]);
+    setSelectedExtractorIds([]);
+    setWidgets([]);
+    fetchResources(domainId).then(({ resources, groups }) => {
+      setResources(resources);
+      setGroups(groups);
+    });
+  }, [domainId]);
+
+  useEffect(() => {
+    if (!domainId) return;
+    if (selectedResourceIds.length === 0) {
+      setExtractors([]);
+      setSelectedExtractorIds([]);
+      return;
+    }
+    fetchExtractors(domainId, selectedResourceIds).then((list) => {
+      setExtractors(list);
+      setSelectedExtractorIds((prev) => prev.filter((id) => list.some((e) => e.id === id)));
+    });
+  }, [domainId, selectedResourceIds]);
+
+  function toggleResource(id) {
+    setSelectedResourceIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleGroup(group) {
+    const allSelected = group.resourceIds.every((id) => selectedResourceIds.includes(id));
+    setSelectedResourceIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !group.resourceIds.includes(id))
+        : [...new Set([...prev, ...group.resourceIds])]
+    );
+  }
+
+  function toggleExtractor(id) {
+    setSelectedExtractorIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
@@ -23,22 +77,23 @@ function App() {
   async function handleShow() {
     setLoading(true);
     try {
-      setWidgets(await fetchWidgets(selectedIds));
+      setWidgets(await fetchWidgets(domainId, selectedResourceIds, selectedExtractorIds));
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleRefresh(sourceId) {
-    setRefreshingId(sourceId);
+  async function handleRefresh(resourceId, extractorId) {
+    const key = `${resourceId}-${extractorId}`;
+    setRefreshingKey(key);
     try {
-      const refreshed = await fetchWidgets([sourceId]);
+      const refreshed = await fetchWidgets(domainId, [resourceId], [extractorId]);
       setWidgets((prev) => [
-        ...prev.filter((w) => w.sourceId !== sourceId),
+        ...prev.filter((w) => !(w.resourceId === resourceId && w.extractorId === extractorId)),
         ...refreshed,
       ]);
     } finally {
-      setRefreshingId(null);
+      setRefreshingKey(null);
     }
   }
 
@@ -46,29 +101,37 @@ function App() {
     <div className="app">
       <h1>SimpleDash</h1>
 
-      <div className="selector">
-        {providers.map((p) => (
-          <label key={p.id} className="selector-item" title={p.description}>
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(p.id)}
-              onChange={() => toggleProvider(p.id)}
-            />
-            {p.name}
-          </label>
-        ))}
-        <button onClick={handleShow} disabled={selectedIds.length === 0 || loading}>
-          {loading ? 'Chargement...' : 'Afficher'}
-        </button>
-      </div>
+      <DomainTabs domains={domains} activeId={domainId} onSelect={setDomainId} />
+
+      <ResourcePicker
+        resources={resources}
+        groups={groups}
+        selectedIds={selectedResourceIds}
+        onToggleResource={toggleResource}
+        onToggleGroup={toggleGroup}
+      />
+
+      <ExtractorPicker
+        extractors={extractors}
+        selectedIds={selectedExtractorIds}
+        onToggle={toggleExtractor}
+      />
+
+      <button
+        className="show-btn"
+        onClick={handleShow}
+        disabled={selectedResourceIds.length === 0 || selectedExtractorIds.length === 0 || loading}
+      >
+        {loading ? 'Chargement...' : 'Afficher'}
+      </button>
 
       <div className="cards">
         {widgets.map((w) => (
           <Card
             key={w.id}
             widget={w}
-            refreshing={refreshingId === w.sourceId}
-            onRefresh={() => handleRefresh(w.sourceId)}
+            refreshing={refreshingKey === `${w.resourceId}-${w.extractorId}`}
+            onRefresh={() => handleRefresh(w.resourceId, w.extractorId)}
           />
         ))}
       </div>

@@ -2,7 +2,10 @@ function Card({ widget, onRefresh, refreshing }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3>{widget.title}</h3>
+        <div>
+          <h3>{widget.title}</h3>
+          {widget.resourceName && <p className="card-subtitle">{widget.resourceName}</p>}
+        </div>
         <button
           className="refresh-btn"
           onClick={onRefresh}
