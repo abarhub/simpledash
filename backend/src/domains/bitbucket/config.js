@@ -1,7 +1,7 @@
 // Bitbucket Server / Data Center (pas Bitbucket Cloud), auth par Personal
 // Access Token. Renseigne backend/.env (voir .env.example) : BITBUCKET_BASE_URL,
-// BITBUCKET_TOKEN, BITBUCKET_USERNAME (ton identifiant, pour "à moi"/"validée
-// par moi").
+// BITBUCKET_TOKEN, BITBUCKET_USERNAME (le "slug" de ton compte, pour "à
+// moi"/"validée par moi" — champ requis depuis Bitbucket Data Center 8.x).
 const baseUrl = process.env.BITBUCKET_BASE_URL;
 const token = process.env.BITBUCKET_TOKEN;
 const username = process.env.BITBUCKET_USERNAME;

@@ -1,13 +1,13 @@
 import config from '../config.js';
 
 function isApprovedByMe(pr) {
-  return (pr.reviewers ?? []).some((r) => r.user?.name === config.username && r.approved);
+  return (pr.reviewers ?? []).some((r) => r.user?.slug === config.username && r.approved);
 }
 
 export default {
   id: 'bitbucket-prs',
   name: 'Pull requests',
-  description: 'Liste des PR ouvertes du dépôt — un widget par PR',
+  description: 'Liste des PR ouvertes du dépôt — un tableau (titre, auteur, à moi, validée, date)',
   compatibleTypes: ['bitbucket'],
 
   async fetch(resource) {
@@ -25,16 +25,27 @@ export default {
     }
     const json = await res.json();
 
-    return (json.values ?? []).map((pr) => ({
-      id: String(pr.id),
-      title: pr.title,
+    const rows = (json.values ?? []).map((pr) => ({
       url: pr.links?.self?.[0]?.href,
-      data: {
-        Auteur: pr.author?.user?.displayName ?? '?',
-        'À moi': pr.author?.user?.name === config.username ? 'Oui' : 'Non',
-        'Validée par moi': isApprovedByMe(pr) ? 'Oui' : 'Non',
-        Date: pr.createdDate ? new Date(pr.createdDate).toLocaleDateString('fr-FR') : '?',
-      },
+      cells: [
+        pr.title,
+        pr.author?.user?.displayName ?? '?',
+        pr.author?.user?.slug === config.username ? 'Oui' : 'Non',
+        isApprovedByMe(pr) ? 'Oui' : 'Non',
+        pr.createdDate ? new Date(pr.createdDate).toLocaleDateString('fr-FR') : '?',
+      ],
     }));
+
+    if (rows.length === 0) {
+      return [{ id: 'pull-requests', title: 'Pull requests', data: { 'Pull requests': 'aucune PR ouverte' } }];
+    }
+
+    return [
+      {
+        id: 'pull-requests',
+        title: 'Pull requests',
+        table: { columns: ['Titre', 'Auteur', 'À moi', 'Validée', 'Date'], rows },
+      },
+    ];
   },
 };

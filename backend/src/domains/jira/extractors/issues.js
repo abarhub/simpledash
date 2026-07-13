@@ -3,7 +3,7 @@ import config from '../config.js';
 export default {
   id: 'jira-issues',
   name: 'Tickets',
-  description: 'Résultat de la requête JQL (ID, statut, titre) — un widget par ticket',
+  description: 'Résultat de la requête JQL — un tableau (titre, ID, statut, mise à jour)',
   compatibleTypes: ['jira'],
 
   async fetch(resource) {
@@ -21,17 +21,26 @@ export default {
     }
     const json = await res.json();
 
-    return (json.issues ?? []).map((issue) => ({
-      id: issue.key,
-      title: issue.fields?.summary ?? issue.key,
+    const rows = (json.issues ?? []).map((issue) => ({
       url: new URL(`/browse/${issue.key}`, config.baseUrl).toString(),
-      data: {
-        ID: issue.key,
-        Statut: issue.fields?.status?.name ?? '?',
-        'Mise à jour': issue.fields?.updated
-          ? new Date(issue.fields.updated).toLocaleDateString('fr-FR')
-          : '?',
-      },
+      cells: [
+        issue.fields?.summary ?? issue.key,
+        issue.key,
+        issue.fields?.status?.name ?? '?',
+        issue.fields?.updated ? new Date(issue.fields.updated).toLocaleDateString('fr-FR') : '?',
+      ],
     }));
+
+    if (rows.length === 0) {
+      return [{ id: 'issues', title: 'Tickets', data: { Tickets: 'aucun ticket trouvé' } }];
+    }
+
+    return [
+      {
+        id: 'issues',
+        title: 'Tickets',
+        table: { columns: ['Titre', 'ID', 'Statut', 'Mise à jour'], rows },
+      },
+    ];
   },
 };

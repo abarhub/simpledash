@@ -20,9 +20,12 @@ du FS, etc.) et renvoie une ou plusieurs "cards" par ressource × info.
   déclare `compatibleTypes` : seuls les extracteurs compatibles avec le type
   des ressources sélectionnées sont proposés au front.
 - **Widget** — le résultat d'un extracteur pour une ressource (une card).
-  Un extracteur peut retourner plusieurs widgets (ex: mémoire/CPU/uptime, ou
-  un ticket Jira par widget). Un widget peut avoir un `url` (lien "Ouvrir ↗"
-  vers le serveur distant affiché sur la card).
+  Un extracteur peut retourner plusieurs widgets (ex: mémoire/CPU/uptime).
+  Un widget affiche soit `data` (clé/valeur, pour décrire une seule chose :
+  une version, un statut), soit `table` (`{ columns, rows }`, pour une liste
+  d'éléments similaires : tickets Jira, PR Bitbucket — chaque ligne peut
+  avoir son propre `url`). Un widget peut aussi avoir un `url` global (lien
+  "Ouvrir ↗" affiché sur la card).
 
 La sélection finale est un produit **ressources × extracteurs compatibles**.
 
@@ -56,8 +59,22 @@ main dans `backend/src/domains/jira/config.js` et
 `backend/src/domains/bitbucket/config.js`.
 
 Non testé contre de vrais serveurs (pas d'accès réseau depuis l'environnement
-de développement) — à vérifier après configuration, notamment côté
-certificat TLS si le serveur utilise une CA interne.
+de développement) — à vérifier après configuration.
+
+**Certificat TLS interne** : si le serveur Jira/Bitbucket utilise une CA
+interne (cas courant en on-premise), les appels `fetch` échoueront tant que
+Node ne connaît pas cette CA. La bonne approche est la variable
+d'environnement native `NODE_EXTRA_CA_CERTS` (fait confiance à la CA sans
+désactiver la vérification TLS globalement) :
+
+```bash
+NODE_EXTRA_CA_CERTS=/chemin/vers/ca-interne.pem npm run dev
+```
+
+À définir dans l'environnement au lancement (pas dans `backend/.env` : ce
+fichier est chargé par Node après le démarrage du module TLS, trop tard
+pour cette variable). Éviter `NODE_TLS_REJECT_UNAUTHORIZED=0`, qui désactive
+toute vérification de certificat pour le processus entier.
 
 ## Ajouter une nouvelle info sur un domaine existant
 
