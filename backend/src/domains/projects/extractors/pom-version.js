@@ -1,5 +1,4 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { analyzeProject } from '../../../lib/analyzeProject.js';
 
 export default {
   id: 'pom-version',
@@ -8,8 +7,7 @@ export default {
   compatibleTypes: ['maven'],
 
   async fetch(resource) {
-    const raw = await fs.readFile(path.join(resource.path, 'pom.xml'), 'utf-8');
-    const match = raw.match(/<version>([^<]+)<\/version>/);
-    return [{ id: 'version', title: 'Version', data: { Version: match ? match[1] : 'introuvable' } }];
+    const { pom } = await analyzeProject(resource.path);
+    return [{ id: 'version', title: 'Version', data: { Version: pom?.version ?? 'introuvable' } }];
   },
 };

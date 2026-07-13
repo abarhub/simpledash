@@ -6,7 +6,8 @@ import joke from './extractors/joke.js';
 export default {
   id: 'system',
   name: 'Système',
-  resources: config.resources,
-  groups: config.groups,
+  async listResources() {
+    return { resources: config.resources, groups: config.groups };
+  },
   extractors: [datetime, systemInfo, joke],
 };

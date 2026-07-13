@@ -22,7 +22,7 @@ function ResourcePicker({ resources, groups, selectedIds, onToggleResource, onTo
               onChange={() => onToggleResource(r.id)}
             />
             {r.name}
-            <span className="type-badge">{r.type}</span>
+            <span className="type-badge">{r.types.join(', ')}</span>
           </label>
         ))}
       </div>

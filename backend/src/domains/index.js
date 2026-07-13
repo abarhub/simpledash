@@ -12,17 +12,18 @@ export function getDomain(id) {
   return domains.find((d) => d.id === id);
 }
 
-export function listResources(domainId) {
+export async function listResources(domainId) {
   const domain = getDomain(domainId);
   if (!domain) return null;
-  return { resources: domain.resources, groups: domain.groups ?? [] };
+  return domain.listResources();
 }
 
-export function listExtractors(domainId, resourceIds) {
+export async function listExtractors(domainId, resourceIds) {
   const domain = getDomain(domainId);
   if (!domain) return null;
+  const { resources } = await domain.listResources();
   const types = new Set(
-    domain.resources.filter((r) => resourceIds.includes(r.id)).map((r) => r.type)
+    resources.filter((r) => resourceIds.includes(r.id)).flatMap((r) => r.types)
   );
   return domain.extractors
     .filter((e) => e.compatibleTypes.some((t) => types.has(t)))
@@ -33,12 +34,13 @@ export async function getWidgets(domainId, resourceIds, extractorIds) {
   const domain = getDomain(domainId);
   if (!domain) throw new Error(`Domaine inconnu: ${domainId}`);
 
-  const resources = domain.resources.filter((r) => resourceIds.includes(r.id));
+  const { resources: allResources } = await domain.listResources();
+  const resources = allResources.filter((r) => resourceIds.includes(r.id));
   const extractors = domain.extractors.filter((e) => extractorIds.includes(e.id));
 
   const promises = resources.flatMap((resource) =>
     extractors
-      .filter((extractor) => extractor.compatibleTypes.includes(resource.type))
+      .filter((extractor) => extractor.compatibleTypes.some((t) => resource.types.includes(t)))
       .map(async (extractor) => {
         try {
           const widgets = await extractor.fetch(resource);

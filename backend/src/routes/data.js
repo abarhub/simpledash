@@ -7,15 +7,15 @@ router.get('/domains', (req, res) => {
   res.json(listDomains());
 });
 
-router.get('/domains/:domainId/resources', (req, res) => {
-  const result = listResources(req.params.domainId);
+router.get('/domains/:domainId/resources', async (req, res) => {
+  const result = await listResources(req.params.domainId);
   if (!result) return res.status(404).json({ error: 'Domaine inconnu' });
   res.json(result);
 });
 
-router.get('/domains/:domainId/extractors', (req, res) => {
+router.get('/domains/:domainId/extractors', async (req, res) => {
   const resourceIds = (req.query.resourceIds ?? '').split(',').filter(Boolean);
-  const extractors = listExtractors(req.params.domainId, resourceIds);
+  const extractors = await listExtractors(req.params.domainId, resourceIds);
   if (!extractors) return res.status(404).json({ error: 'Domaine inconnu' });
   res.json(extractors);
 });

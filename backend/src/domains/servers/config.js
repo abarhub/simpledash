@@ -1,8 +1,8 @@
 export default {
   resources: [
-    { id: 'srv-web-1', name: 'Serveur Web 1', type: 'http', url: 'https://example.com' },
-    { id: 'srv-web-2', name: 'Serveur Web 2', type: 'http', url: 'https://example.org' },
-    { id: 'srv-db-1', name: 'Serveur DB', type: 'ssh', host: 'db.internal.local' },
+    { id: 'srv-web-1', name: 'Serveur Web 1', types: ['http'], url: 'https://example.com' },
+    { id: 'srv-web-2', name: 'Serveur Web 2', types: ['http'], url: 'https://example.org' },
+    { id: 'srv-db-1', name: 'Serveur DB', types: ['ssh'], host: 'db.internal.local' },
   ],
   groups: [
     {
