@@ -5,10 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "fast-xml-parser": "^5.10.0",
+    "smol-toml": "^1.7.0"
   }
 }
