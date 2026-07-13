@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import DomainTabs from './components/DomainTabs';
-import ResourcePicker from './components/ResourcePicker';
-import ExtractorPicker from './components/ExtractorPicker';
+import SelectionModal from './components/SelectionModal';
 import Card from './components/Card';
 import { fetchDomains, fetchResources, fetchExtractors, fetchWidgets } from './api';
 import './App.css';
@@ -32,7 +30,7 @@ function App() {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshingKey, setRefreshingKey] = useState(null);
-  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     fetchDomains().then((list) => {
@@ -117,41 +115,31 @@ function App() {
 
   return (
     <div className="app">
-      <h1>SimpleDash</h1>
-
-      <div className="selection-panel">
-        <button className="panel-toggle" onClick={() => setPanelCollapsed((c) => !c)}>
-          {panelCollapsed ? 'Choisir des infos ▸' : 'Réduire ▾'}
+      <div className="topbar">
+        <h1>SimpleDash</h1>
+        <button className="open-picker-btn" onClick={() => setPickerOpen(true)}>
+          + Ajouter des infos
         </button>
-
-        {!panelCollapsed && (
-          <>
-            <DomainTabs domains={domains} activeId={domainId} onSelect={setDomainId} />
-
-            <ResourcePicker
-              resources={resources}
-              groups={groups}
-              selectedIds={selectedResourceIds}
-              onToggleResource={toggleResource}
-              onToggleGroup={toggleGroup}
-            />
-
-            <ExtractorPicker
-              extractors={extractors}
-              selectedIds={selectedExtractorIds}
-              onToggle={toggleExtractor}
-            />
-
-            <button
-              className="show-btn"
-              onClick={handleAdd}
-              disabled={selectedResourceIds.length === 0 || selectedExtractorIds.length === 0 || loading}
-            >
-              {loading ? 'Chargement...' : 'Ajouter'}
-            </button>
-          </>
-        )}
       </div>
+
+      {pickerOpen && (
+        <SelectionModal
+          domains={domains}
+          domainId={domainId}
+          onSelectDomain={setDomainId}
+          resources={resources}
+          groups={groups}
+          selectedResourceIds={selectedResourceIds}
+          onToggleResource={toggleResource}
+          onToggleGroup={toggleGroup}
+          extractors={extractors}
+          selectedExtractorIds={selectedExtractorIds}
+          onToggleExtractor={toggleExtractor}
+          onAdd={handleAdd}
+          onClose={() => setPickerOpen(false)}
+          loading={loading}
+        />
+      )}
 
       {widgets.length > 0 && (
         <div className="cards-toolbar">

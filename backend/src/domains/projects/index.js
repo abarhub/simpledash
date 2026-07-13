@@ -26,10 +26,20 @@ async function listResources() {
     path: dir,
   }));
 
-  const groups =
-    resources.length > 0
+  const idByResolvedPath = new Map(resources.map((r) => [path.resolve(r.path), r.id]));
+
+  const configuredGroups = (config.groups ?? []).map((group) => ({
+    id: group.id,
+    name: group.name,
+    resourceIds: group.paths.map((p) => idByResolvedPath.get(path.resolve(p))).filter(Boolean),
+  }));
+
+  const groups = [
+    ...configuredGroups,
+    ...(resources.length > 0
       ? [{ id: 'all-projects', name: 'Tous les projets', resourceIds: resources.map((r) => r.id) }]
-      : [];
+      : []),
+  ];
 
   return { resources, groups };
 }
