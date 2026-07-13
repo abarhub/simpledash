@@ -39,7 +39,7 @@ test('package.json seul', async () => {
     assert.equal(result.pom, null);
     assert.equal(result.npm.name, 'my-frontend');
     assert.equal(result.npm.version, '0.1.0');
-    assert.equal(result.summary.angularVersion, '17.0.2');
+    assert.deepEqual(result.summary.angularVersion, ['17.0.2']);
   });
 });
 
@@ -75,7 +75,7 @@ test('pom.xml simple sans parent', async () => {
     assert.deepEqual(result.pom.dependencies, [
       { groupId: 'org.apache.commons', artifactId: 'commons-lang3', version: '3.14.0', scope: null },
     ]);
-    assert.equal(result.summary.javaVersion, '17');
+    assert.deepEqual(result.summary.javaVersion, ['17']);
     assert.deepEqual(result.modules, []);
   });
 });
@@ -111,8 +111,8 @@ test('pom.xml avec parent spring-boot-starter-parent', async () => {
     assert.equal(result.pom.version, '3.2.1');
     assert.equal(result.pom.artifactId, 'spring-app');
     assert.equal(result.pom.dependencies[0].version, null);
-    assert.equal(result.summary.springBootVersion, '3.2.1');
-    assert.equal(result.summary.javaVersion, '21');
+    assert.deepEqual(result.summary.springBootVersion, ['3.2.1']);
+    assert.deepEqual(result.summary.javaVersion, ['21']);
   });
 });
 
@@ -179,7 +179,67 @@ test('pom.xml multi-module avec un module contenant un package.json', async () =
 
     assert.equal(web.pom.artifactId, 'module-web');
     assert.equal(web.npm.name, 'module-web-frontend');
-    assert.equal(web.summary.angularVersion, '17.0.2');
+    assert.deepEqual(web.summary.angularVersion, ['17.0.2']);
+
+    // la racine (pom seul, pas de package.json) remonte quand même
+    // l'Angular détecté dans le sous-module
+    assert.deepEqual(result.summary.angularVersion, ['17.0.2']);
+  });
+});
+
+test('summary : une version Java différente sur un sous-module vient s\'ajouter à celle de la racine', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'pom.xml'),
+      `<project>
+  <groupId>com.example</groupId>
+  <artifactId>multi-module</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <properties>
+    <java.version>21</java.version>
+  </properties>
+  <modules>
+    <module>module-a</module>
+    <module>module-b</module>
+  </modules>
+</project>`
+    );
+
+    await fs.mkdir(path.join(dir, 'module-a'));
+    await fs.writeFile(
+      path.join(dir, 'module-a', 'pom.xml'),
+      `<project>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>multi-module</artifactId>
+    <version>1.0.0</version>
+  </parent>
+  <artifactId>module-a</artifactId>
+  <properties>
+    <java.version>21</java.version>
+  </properties>
+</project>`
+    );
+
+    await fs.mkdir(path.join(dir, 'module-b'));
+    await fs.writeFile(
+      path.join(dir, 'module-b', 'pom.xml'),
+      `<project>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>multi-module</artifactId>
+    <version>1.0.0</version>
+  </parent>
+  <artifactId>module-b</artifactId>
+  <properties>
+    <java.version>25</java.version>
+  </properties>
+</project>`
+    );
+
+    const result = await analyzeProject(dir);
+    assert.deepEqual(result.summary.javaVersion, ['21', '25']);
   });
 });
 
@@ -203,7 +263,7 @@ tokio = { version = "1.35", features = ["full"] }
     assert.equal(result.rust.version, '0.3.1');
     assert.equal(result.rust.rustVersion, '1.75');
     assert.deepEqual(result.rust.dependencies, { serde: '1.0', tokio: '1.35' });
-    assert.equal(result.summary.rustVersion, '1.75');
+    assert.deepEqual(result.summary.rustVersion, ['1.75']);
     assert.deepEqual(result.modules, []);
   });
 });
@@ -233,7 +293,7 @@ require (
       'github.com/foo/bar': 'v1.2.3',
       'github.com/baz/qux': 'v0.5.0',
     });
-    assert.equal(result.summary.goVersion, '1.21');
+    assert.deepEqual(result.summary.goVersion, ['1.21']);
   });
 });
 

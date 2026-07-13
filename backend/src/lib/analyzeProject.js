@@ -165,8 +165,12 @@ async function parseGoWorkMembers(goWorkPath) {
   return members;
 }
 
-function buildSummary(pom, npm, rust, go) {
-  const summary = {};
+const SUMMARY_KEYS = ['javaVersion', 'springBootVersion', 'angularVersion', 'rustVersion', 'goVersion'];
+
+// Valeurs de résumé propres au répertoire courant (sans tenir compte des
+// sous-modules).
+function localSummaryValues(pom, npm, rust, go) {
+  const values = { javaVersion: [], springBootVersion: [], angularVersion: [], rustVersion: [], goVersion: [] };
 
   if (pom) {
     const javaVersion =
@@ -174,7 +178,7 @@ function buildSummary(pom, npm, rust, go) {
       pom.properties['maven.compiler.release'] ??
       pom.properties['maven.compiler.source'] ??
       null;
-    if (javaVersion) summary.javaVersion = javaVersion;
+    if (javaVersion) values.javaVersion.push(javaVersion);
 
     const springBootDep = pom.dependencies.find(
       (dep) => dep.groupId === 'org.springframework.boot' && dep.version
@@ -183,17 +187,47 @@ function buildSummary(pom, npm, rust, go) {
       pom.parent?.artifactId === 'spring-boot-starter-parent'
         ? pom.parent.version
         : (pom.properties['spring-boot.version'] ?? springBootDep?.version ?? null);
-    if (springBootVersion) summary.springBootVersion = springBootVersion;
+    if (springBootVersion) values.springBootVersion.push(springBootVersion);
   }
 
   if (npm) {
     const angularVersion = npm.dependencies?.['@angular/core'];
-    if (angularVersion) summary.angularVersion = angularVersion;
+    if (angularVersion) values.angularVersion.push(angularVersion);
   }
 
-  if (rust?.rustVersion) summary.rustVersion = rust.rustVersion;
-  if (go?.goVersion) summary.goVersion = go.goVersion;
+  if (rust?.rustVersion) values.rustVersion.push(rust.rustVersion);
+  if (go?.goVersion) values.goVersion.push(go.goVersion);
 
+  return values;
+}
+
+function mergeUnique(lists) {
+  const seen = new Set();
+  const result = [];
+  for (const list of lists) {
+    for (const value of list) {
+      if (!seen.has(value)) {
+        seen.add(value);
+        result.push(value);
+      }
+    }
+  }
+  return result;
+}
+
+// Résumé du répertoire courant + de tous ses sous-modules (récursif, en
+// remontée) : chaque valeur devient une liste dédupliquée (valeur du
+// répertoire courant d'abord, puis celles des modules dans leur ordre),
+// pour que par exemple une version Java différente sur un sous-module
+// apparaisse aux côtés de celle de la racine plutôt que de l'écraser.
+function buildSummary(pom, npm, rust, go, childSummaries) {
+  const own = localSummaryValues(pom, npm, rust, go);
+
+  const summary = {};
+  for (const key of SUMMARY_KEYS) {
+    const merged = mergeUnique([own[key], ...childSummaries.map((s) => s[key] ?? [])]);
+    if (merged.length > 0) summary[key] = merged;
+  }
   return summary;
 }
 
@@ -243,7 +277,7 @@ export async function analyzeProject(dir) {
     npm,
     rust,
     go,
-    summary: buildSummary(pom, npm, rust, go),
+    summary: buildSummary(pom, npm, rust, go, modules.map((m) => m.summary)),
     modules,
   };
 }
