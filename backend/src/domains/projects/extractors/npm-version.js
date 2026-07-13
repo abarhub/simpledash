@@ -1,5 +1,4 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { analyzeProject } from '../../../lib/analyzeProject.js';
 
 export default {
   id: 'npm-version',
@@ -8,8 +7,7 @@ export default {
   compatibleTypes: ['npm'],
 
   async fetch(resource) {
-    const raw = await fs.readFile(path.join(resource.path, 'package.json'), 'utf-8');
-    const pkg = JSON.parse(raw);
-    return [{ id: 'version', title: 'Version', data: { Version: pkg.version } }];
+    const { npm } = await analyzeProject(resource.path);
+    return [{ id: 'version', title: 'Version', data: { Version: npm?.version ?? 'introuvable' } }];
   },
 };

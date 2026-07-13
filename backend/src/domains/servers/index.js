@@ -5,7 +5,8 @@ import serverInfo from './extractors/server-info.js';
 export default {
   id: 'servers',
   name: 'Serveurs',
-  resources: config.resources,
-  groups: config.groups,
+  async listResources() {
+    return { resources: config.resources, groups: config.groups };
+  },
   extractors: [httpStatus, serverInfo],
 };

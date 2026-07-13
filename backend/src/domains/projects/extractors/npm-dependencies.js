@@ -1,5 +1,4 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { analyzeProject } from '../../../lib/analyzeProject.js';
 
 export default {
   id: 'npm-dependencies',
@@ -8,9 +7,8 @@ export default {
   compatibleTypes: ['npm'],
 
   async fetch(resource) {
-    const raw = await fs.readFile(path.join(resource.path, 'package.json'), 'utf-8');
-    const pkg = JSON.parse(raw);
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const { npm } = await analyzeProject(resource.path);
+    const deps = { ...npm?.dependencies, ...npm?.devDependencies };
     return [{ id: 'dependencies', title: 'Dépendances', data: deps }];
   },
 };
