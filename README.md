@@ -45,8 +45,23 @@ La sélection finale est un produit **ressources × extracteurs compatibles**.
 
 ```bash
 cd backend && npm install && npm run dev   # http://localhost:3008
-cd frontend && npm install && npm run dev  # http://localhost:5173
+cd frontend && npm install && npm run dev  # http://localhost:5173, proxy /api -> :3008
 ```
+
+## Déployer (front + back sur un seul serveur Node)
+
+Le backend sert le frontend buildé s'il le trouve (`frontend/dist`) — un
+seul process, un seul port, pas de CORS en prod. Depuis la racine du repo :
+
+```bash
+npm run install:all   # installe backend/ et frontend/
+npm run build          # build le frontend dans frontend/dist
+npm start               # démarre le backend, qui sert aussi le front
+```
+
+Le tout écoute sur `PORT` (défaut `3008`). En dev, le frontend continue de
+tourner séparément via `npm run dev` (proxy Vite vers le backend) ; en prod
+c'est uniquement le backend qui tourne.
 
 ## Domaines Jira / Bitbucket (serveurs on-premise)
 
