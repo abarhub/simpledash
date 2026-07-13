@@ -1,8 +1,10 @@
 import system from './system/index.js';
 import projects from './projects/index.js';
 import servers from './servers/index.js';
+import jira from './jira/index.js';
+import bitbucket from './bitbucket/index.js';
 
-const domains = [system, projects, servers];
+const domains = [system, projects, servers, jira, bitbucket];
 
 export function listDomains() {
   return domains.map(({ id, name }) => ({ id, name }));
