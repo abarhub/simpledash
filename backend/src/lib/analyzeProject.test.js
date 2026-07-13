@@ -182,3 +182,138 @@ test('pom.xml multi-module avec un module contenant un package.json', async () =
     assert.equal(web.summary.angularVersion, '17.0.2');
   });
 });
+
+test('Cargo.toml seul', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'Cargo.toml'),
+      `[package]
+name = "my-crate"
+version = "0.3.1"
+
+[dependencies]
+serde = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+`
+    );
+
+    const result = await analyzeProject(dir);
+    assert.equal(result.rust.name, 'my-crate');
+    assert.equal(result.rust.version, '0.3.1');
+    assert.deepEqual(result.rust.dependencies, { serde: '1.0', tokio: '1.35' });
+    assert.deepEqual(result.modules, []);
+  });
+});
+
+test('go.mod seul, avec require en bloc et en ligne simple', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'go.mod'),
+      `module github.com/example/my-service
+
+go 1.21
+
+require github.com/gin-gonic/gin v1.9.1
+
+require (
+    github.com/foo/bar v1.2.3
+    github.com/baz/qux v0.5.0 // indirect
+)
+`
+    );
+
+    const result = await analyzeProject(dir);
+    assert.equal(result.go.module, 'github.com/example/my-service');
+    assert.equal(result.go.goVersion, '1.21');
+    assert.deepEqual(result.go.dependencies, {
+      'github.com/gin-gonic/gin': 'v1.9.1',
+      'github.com/foo/bar': 'v1.2.3',
+      'github.com/baz/qux': 'v0.5.0',
+    });
+  });
+});
+
+test('workspaces npm : un membre déclaré littéralement est analysé', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ name: 'root', version: '1.0.0', workspaces: ['packages/pkg-a'] })
+    );
+    await fs.mkdir(path.join(dir, 'packages', 'pkg-a'), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'packages', 'pkg-a', 'package.json'),
+      JSON.stringify({ name: 'pkg-a', version: '0.1.0' })
+    );
+
+    const result = await analyzeProject(dir);
+    assert.equal(result.modules.length, 1);
+    assert.equal(result.modules[0].npm.name, 'pkg-a');
+  });
+});
+
+test('members Cargo workspace : un membre déclaré littéralement est analysé', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'Cargo.toml'),
+      `[workspace]
+members = ["crates/crate-a"]
+`
+    );
+    await fs.mkdir(path.join(dir, 'crates', 'crate-a'), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'crates', 'crate-a', 'Cargo.toml'),
+      `[package]
+name = "crate-a"
+version = "0.1.0"
+`
+    );
+
+    const result = await analyzeProject(dir);
+    assert.equal(result.modules.length, 1);
+    assert.equal(result.modules[0].rust.name, 'crate-a');
+  });
+});
+
+test('go.work : les modules listés via "use" sont analysés, même sans go.mod à la racine', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'go.work'),
+      `go 1.21
+
+use (
+    ./service-a
+    ./service-b
+)
+`
+    );
+    await fs.mkdir(path.join(dir, 'service-a'));
+    await fs.writeFile(path.join(dir, 'service-a', 'go.mod'), 'module github.com/example/service-a\n\ngo 1.21\n');
+    await fs.mkdir(path.join(dir, 'service-b'));
+    await fs.writeFile(path.join(dir, 'service-b', 'go.mod'), 'module github.com/example/service-b\n\ngo 1.21\n');
+
+    const result = await analyzeProject(dir);
+    assert.equal(result.go, null);
+    assert.equal(result.modules.length, 2);
+    assert.deepEqual(
+      result.modules.map((m) => m.go.module).sort(),
+      ['github.com/example/service-a', 'github.com/example/service-b']
+    );
+  });
+});
+
+test('un pattern glob dans workspaces n\'est pas résolu', async () => {
+  await withTempDir(async (dir) => {
+    await fs.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ name: 'root', version: '1.0.0', workspaces: ['packages/*'] })
+    );
+    await fs.mkdir(path.join(dir, 'packages', 'pkg-a'), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'packages', 'pkg-a', 'package.json'),
+      JSON.stringify({ name: 'pkg-a', version: '0.1.0' })
+    );
+
+    const result = await analyzeProject(dir);
+    assert.deepEqual(result.modules, []);
+  });
+});
