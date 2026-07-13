@@ -2,11 +2,22 @@ function Card({ widget, onRefresh, onRemove, refreshing }) {
   return (
     <div className="card">
       <div className="card-header">
-        <div>
-          <h3>{widget.title}</h3>
+        <div className="card-heading">
+          <h3 title={widget.title}>{widget.title}</h3>
           {widget.resourceName && <p className="card-subtitle">{widget.resourceName}</p>}
         </div>
         <div className="card-actions">
+          {widget.url && (
+            <a
+              className="link-btn"
+              href={widget.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Ouvrir sur le serveur distant"
+            >
+              ↗
+            </a>
+          )}
           <button
             className="refresh-btn"
             onClick={onRefresh}
@@ -29,7 +40,7 @@ function Card({ widget, onRefresh, onRemove, refreshing }) {
               {Object.entries(widget.data).map(([key, value]) => (
                 <tr key={key}>
                   <td className="label">{key}</td>
-                  <td>{String(value)}</td>
+                  <td title={String(value)}>{String(value)}</td>
                 </tr>
               ))}
             </tbody>

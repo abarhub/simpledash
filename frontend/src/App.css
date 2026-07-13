@@ -242,10 +242,17 @@
   border-bottom: 1px solid var(--border);
 }
 
+.card-heading {
+  min-width: 0;
+}
+
 .card-header h3 {
   margin: 0;
   font-size: 16px;
   color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-subtitle {
@@ -260,6 +267,7 @@
   flex-shrink: 0;
 }
 
+.link-btn,
 .refresh-btn,
 .remove-btn {
   border: none;
@@ -270,8 +278,12 @@
   line-height: 1;
   padding: 4px 6px;
   border-radius: 4px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
+.link-btn:hover,
 .refresh-btn:hover {
   background: var(--accent-bg);
 }
@@ -298,6 +310,7 @@
 .card-body table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .card-body td {
@@ -305,9 +318,13 @@
   vertical-align: top;
   text-align: left;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-body td.label {
+  width: 1%;
   color: var(--text);
   padding-right: 12px;
   white-space: nowrap;
