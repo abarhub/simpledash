@@ -1,4 +1,4 @@
-function Card({ widget, onRefresh, refreshing }) {
+function Card({ widget, onRefresh, onRemove, refreshing }) {
   return (
     <div className="card">
       <div className="card-header">
@@ -6,14 +6,19 @@ function Card({ widget, onRefresh, refreshing }) {
           <h3>{widget.title}</h3>
           {widget.resourceName && <p className="card-subtitle">{widget.resourceName}</p>}
         </div>
-        <button
-          className="refresh-btn"
-          onClick={onRefresh}
-          disabled={refreshing}
-          title="Rafraîchir"
-        >
-          {refreshing ? '...' : '⟳'}
-        </button>
+        <div className="card-actions">
+          <button
+            className="refresh-btn"
+            onClick={onRefresh}
+            disabled={refreshing}
+            title="Rafraîchir"
+          >
+            {refreshing ? '...' : '⟳'}
+          </button>
+          <button className="remove-btn" onClick={onRemove} title="Retirer">
+            ✕
+          </button>
+        </div>
       </div>
       <div className="card-body">
         {widget.error ? (
