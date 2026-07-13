@@ -190,6 +190,7 @@ test('Cargo.toml seul', async () => {
       `[package]
 name = "my-crate"
 version = "0.3.1"
+rust-version = "1.75"
 
 [dependencies]
 serde = "1.0"
@@ -200,7 +201,9 @@ tokio = { version = "1.35", features = ["full"] }
     const result = await analyzeProject(dir);
     assert.equal(result.rust.name, 'my-crate');
     assert.equal(result.rust.version, '0.3.1');
+    assert.equal(result.rust.rustVersion, '1.75');
     assert.deepEqual(result.rust.dependencies, { serde: '1.0', tokio: '1.35' });
+    assert.equal(result.summary.rustVersion, '1.75');
     assert.deepEqual(result.modules, []);
   });
 });
@@ -230,6 +233,7 @@ require (
       'github.com/foo/bar': 'v1.2.3',
       'github.com/baz/qux': 'v0.5.0',
     });
+    assert.equal(result.summary.goVersion, '1.21');
   });
 });
 

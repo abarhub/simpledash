@@ -94,6 +94,7 @@ async function parseCargoToml(cargoTomlPath) {
   return {
     name: data.package?.name ?? null,
     version: data.package?.version ?? null,
+    rustVersion: data.package?.['rust-version'] ?? null,
     dependencies,
     workspaceMembers: data.workspace?.members ?? [],
   };
@@ -164,7 +165,7 @@ async function parseGoWorkMembers(goWorkPath) {
   return members;
 }
 
-function buildSummary(pom, npm) {
+function buildSummary(pom, npm, rust, go) {
   const summary = {};
 
   if (pom) {
@@ -189,6 +190,9 @@ function buildSummary(pom, npm) {
     const angularVersion = npm.dependencies?.['@angular/core'];
     if (angularVersion) summary.angularVersion = angularVersion;
   }
+
+  if (rust?.rustVersion) summary.rustVersion = rust.rustVersion;
+  if (go?.goVersion) summary.goVersion = go.goVersion;
 
   return summary;
 }
@@ -239,7 +243,7 @@ export async function analyzeProject(dir) {
     npm,
     rust,
     go,
-    summary: buildSummary(pom, npm),
+    summary: buildSummary(pom, npm, rust, go),
     modules,
   };
 }
