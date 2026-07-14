@@ -5,12 +5,13 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
 **Statut : domaines `système` et `serveurs` portés.** `jira`, `bitbucket`,
-`bamboo`, `sonar` restent à porter. `projects` est en cours : sa brique de
-découverte (`com.simpledash.lib.FindProjects`, équivalent de
-`backend/src/lib/findProjects.js`) est écrite et testée, mais pas encore
-branchée à un domaine — même découpage par étapes que côté Node à
-l'époque (`findProjects` puis `analyzeProject` puis leur intégration,
-dans des PR séparées).
+`bamboo`, `sonar` restent à porter. `projects` est en cours : ses deux
+briques (`com.simpledash.lib.FindProjects` et `AnalyzeProject`, équivalents
+de `backend/src/lib/findProjects.js` et `analyzeProject.js`) sont écrites
+et testées, mais pas encore branchées à un domaine — même découpage par
+étapes que côté Node à l'époque. `AnalyzeProject` ne gère pour l'instant que
+`pom.xml`/`package.json` (pas de dépendance TOML ajoutée pour Cargo.toml,
+pas de parsing go.mod/go.work) ; Rust/Go suivront dans une PR séparée.
 
 Compile et testé avec `mvn clean compile` / `mvn test`.
 
