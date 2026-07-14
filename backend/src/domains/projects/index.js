@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import config from './config.js';
@@ -7,10 +8,20 @@ import npmDependencies from './extractors/npm-dependencies.js';
 import pomVersion from './extractors/pom-version.js';
 import summary from './extractors/summary.js';
 import modules from './extractors/modules.js';
+import gitInfo from './extractors/git-info.js';
 
 function resourceId(dir) {
   const hash = crypto.createHash('sha1').update(dir).digest('hex').slice(0, 8);
   return `${path.basename(dir)}-${hash}`;
+}
+
+async function fileExists(p) {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Scanne les racines déclarées en config à chaque appel (pas de cache) :
@@ -19,12 +30,20 @@ function resourceId(dir) {
 async function listResources() {
   const found = (await Promise.all(config.scanRoots.map((root) => findProjects(root)))).flat();
 
-  const resources = found.map(({ dir, files }) => ({
-    id: resourceId(dir),
-    name: path.basename(dir),
-    types: [...new Set(files.map((file) => PROJECT_MARKERS[file]))],
-    path: dir,
-  }));
+  const resources = await Promise.all(
+    found.map(async ({ dir, files }) => {
+      const types = [...new Set(files.map((file) => PROJECT_MARKERS[file]))];
+      if (await fileExists(path.join(dir, '.git'))) {
+        types.push('git');
+      }
+      return {
+        id: resourceId(dir),
+        name: path.basename(dir),
+        types,
+        path: dir,
+      };
+    })
+  );
 
   const idByResolvedPath = new Map(resources.map((r) => [path.resolve(r.path), r.id]));
 
@@ -48,5 +67,5 @@ export default {
   id: 'projects',
   name: 'Projets',
   listResources,
-  extractors: [npmVersion, npmDependencies, pomVersion, summary, modules],
+  extractors: [npmVersion, npmDependencies, pomVersion, summary, modules, gitInfo],
 };
