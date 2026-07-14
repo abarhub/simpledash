@@ -10,7 +10,7 @@ export default {
         id: 'info',
         title: 'Infos',
         data: {
-          Type: resource.type,
+          Type: resource.types.join(', '),
           ...(resource.url ? { URL: resource.url } : {}),
           ...(resource.host ? { Host: resource.host } : {}),
         },
