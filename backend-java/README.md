@@ -4,11 +4,11 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système`, `serveurs`, `projects` et `jira` portés**,
-`projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
-extracteur Git (dernier commit, branche, statut, avance/retard sur le
+**Statut : domaines `système`, `serveurs`, `projects`, `jira` et
+`bitbucket` portés**, `projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work
++ un extracteur Git (dernier commit, branche, statut, avance/retard sur le
 remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
-place ; `bitbucket`, `bamboo`, `sonar` restent à porter.
+place ; `bamboo`, `sonar` restent à porter.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
@@ -95,7 +95,13 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   par défaut (`ISO_OFFSET_DATE_TIME`) — `IssuesExtractor` utilise un
   `DateTimeFormatter` dédié (motif `Z`) plutôt que le format implicite.
 - **Tests HTTP** : comme `HttpStatusExtractorTest`, `IssuesExtractorTest`
-  démarre un vrai `com.sun.net.httpserver.HttpServer` local plutôt que de
-  mocker le client HTTP, pour garder la même philosophie de test que côté
-  Node (fichiers/process réels) même si Node, lui, mocke `fetch` sur ce
-  point précis.
+  et `PullRequestsExtractorTest` démarrent un vrai
+  `com.sun.net.httpserver.HttpServer` local plutôt que de mocker le
+  client HTTP, pour garder la même philosophie de test que côté Node
+  (fichiers/process réels) même si Node, lui, mocke `fetch` sur ce point
+  précis.
+- **Dates Bitbucket** : `createdDate` est un epoch millis (nombre), pas
+  une chaîne ISO comme le `updated` de Jira — formaté via
+  `Instant.ofEpochMilli(...)` avec le fuseau par défaut de la JVM, comme
+  `new Date(ms).toLocaleDateString('fr-FR')` côté Node utilise le fuseau
+  du process.
