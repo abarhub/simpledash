@@ -7,6 +7,7 @@ import com.simpledash.domains.Resource;
 import com.simpledash.domains.ResourceList;
 import com.simpledash.lib.FindProjects;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -23,7 +24,8 @@ public class ProjectsDomain implements Domain {
         new NpmDependenciesExtractor(),
         new PomVersionExtractor(),
         new SummaryExtractor(),
-        new ModulesExtractor()
+        new ModulesExtractor(),
+        new GitInfoExtractor()
     );
 
     public String id() {
@@ -44,12 +46,20 @@ public class ProjectsDomain implements Domain {
         }
 
         List<Resource> resources = found.stream()
-            .map(fp -> new Resource(
-                resourceId(fp.dir()),
-                fp.dir().getFileName().toString(),
-                fp.files().stream().map(FindProjects.PROJECT_MARKERS::get).distinct().toList(),
-                Map.of("path", fp.dir())
-            ))
+            .map(fp -> {
+                List<String> types = new ArrayList<>(
+                    fp.files().stream().map(FindProjects.PROJECT_MARKERS::get).distinct().toList()
+                );
+                if (Files.isDirectory(fp.dir().resolve(".git"))) {
+                    types.add("git");
+                }
+                return new Resource(
+                    resourceId(fp.dir()),
+                    fp.dir().getFileName().toString(),
+                    types,
+                    Map.of("path", fp.dir())
+                );
+            })
             .toList();
 
         Map<Path, String> idByResolvedPath = new HashMap<>();
