@@ -5,15 +5,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../../../../');
 
 // Répertoires racines scannés par findProjects pour découvrir les projets.
-// Par défaut, le repo lui-même (trouve backend/ et frontend/) — adapte vers
-// tes vrais dossiers de projets (ex: "D:/projet").
+// Par défaut, le repo lui-même — adapte vers tes vrais dossiers de projets
+// (ex: "D:/projet"). Le repo racine a son propre package.json (déploiement
+// single-server), donc le scan s'y arrête sans descendre plus loin ; on
+// ajoute backend/ et frontend/ en scanRoots explicites pour les retrouver
+// comme ressources séparées (utile pour la démo des groupes ci-dessous).
 //
 // Les groupes se définissent ici à la main, par chemin (pas par id, qui est
 // généré dynamiquement) : chaque chemin listé dans "paths" doit correspondre
 // à un répertoire trouvé par le scan pour apparaître dans le groupe. Un
 // groupe "Tous les projets" est toujours ajouté automatiquement en plus.
 export default {
-  scanRoots: [repoRoot],
+  scanRoots: [repoRoot, path.join(repoRoot, 'backend'), path.join(repoRoot, 'frontend')],
   groups: [
     {
       id: 'node-projects',
