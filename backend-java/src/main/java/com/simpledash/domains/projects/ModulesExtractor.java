@@ -21,11 +21,11 @@ public class ModulesExtractor implements Extractor {
     }
 
     public String description() {
-        return "Un widget par sous-module détecté (Maven, npm workspaces)";
+        return "Un widget par sous-module détecté (Maven, npm workspaces, Cargo, Go)";
     }
 
     public List<String> compatibleTypes() {
-        return List.of("npm", "maven");
+        return List.of("npm", "maven", "rust", "go");
     }
 
     public List<ExtractorWidget> fetch(Resource resource) throws Exception {
@@ -59,12 +59,16 @@ public class ModulesExtractor implements Extractor {
     private static String titleFor(AnalyzedProject module) {
         if (module.pom() != null && module.pom().artifactId() != null) return module.pom().artifactId();
         if (module.npm() != null && module.npm().name() != null) return module.npm().name();
+        if (module.rust() != null && module.rust().name() != null) return module.rust().name();
+        if (module.go() != null && module.go().module() != null) return module.go().module();
         return module.dir().getFileName().toString();
     }
 
     private static String versionFor(AnalyzedProject module) {
         if (module.pom() != null && module.pom().version() != null) return module.pom().version();
         if (module.npm() != null && module.npm().version() != null) return module.npm().version();
+        if (module.rust() != null && module.rust().version() != null) return module.rust().version();
+        if (module.go() != null && module.go().goVersion() != null) return module.go().goVersion();
         return "?";
     }
 }

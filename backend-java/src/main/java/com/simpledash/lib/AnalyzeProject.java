@@ -2,6 +2,7 @@ package com.simpledash.lib;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.moandjiezana.toml.Toml;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -10,6 +11,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -17,31 +20,39 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-// Portage de backend/src/lib/analyzeProject.js — pour l'instant pom.xml et
-// package.json seulement (pas de dépendance TOML ajoutée pour Cargo.toml,
-// pas de parsing go.mod/go.work). Rust/Go suivront dans une PR séparée,
-// comme côté Node à l'origine.
-//
-// Suit récursivement les <modules> (Maven) et le champ "workspaces" (npm) ;
-// ne résout pas les patterns glob ("packages/*"), seuls les chemins
-// littéraux sont suivis. Ne résout pas l'héritage Maven complet (pas
-// d'effective-pom) : les valeurs pilotées par des propriétés ou un BOM
+// Portage de backend/src/lib/analyzeProject.js : pom.xml, package.json,
+// Cargo.toml et/ou go.mod (plusieurs peuvent coexister), et suit
+// récursivement les sous-modules déclarés par chaque écosystème (<modules>
+// Maven, "workspaces" npm, [workspace].members Cargo, directives "use" d'un
+// go.work). Les patterns glob ("packages/*") ne sont pas résolus, seuls les
+// chemins littéraux sont suivis. Ne résout pas l'héritage Maven complet
+// (pas d'effective-pom) : les valeurs pilotées par des propriétés ou un BOM
 // peuvent rester non résolues.
 public class AnalyzeProject {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final List<String> PROJECT_MARKERS = List.of("pom.xml", "package.json", "Cargo.toml", "go.mod");
+    private static final Pattern REQUIRE_LINE = Pattern.compile("^require\\s+(\\S+)\\s+(\\S+)");
+    private static final Pattern USE_LINE = Pattern.compile("^use\\s+(\\S+)");
 
     public static AnalyzedProject analyzeProject(Path dir) throws Exception {
         Path pomPath = dir.resolve("pom.xml");
         Path packageJsonPath = dir.resolve("package.json");
+        Path cargoTomlPath = dir.resolve("Cargo.toml");
+        Path goModPath = dir.resolve("go.mod");
+        Path goWorkPath = dir.resolve("go.work");
 
         PomInfo pom = Files.exists(pomPath) ? parsePom(pomPath) : null;
         NpmInfo npm = Files.exists(packageJsonPath) ? parsePackageJson(packageJsonPath) : null;
+        RustInfo rust = Files.exists(cargoTomlPath) ? parseCargoToml(cargoTomlPath) : null;
+        GoInfo go = Files.exists(goModPath) ? parseGoMod(goModPath) : null;
+        List<String> goWorkMembers = Files.exists(goWorkPath) ? parseGoWorkMembers(goWorkPath) : List.of();
 
         Set<String> declaredModulePaths = new LinkedHashSet<>();
         if (pom != null) declaredModulePaths.addAll(pom.modules());
         if (npm != null) declaredModulePaths.addAll(withoutGlobs(npm.workspaces()));
+        if (rust != null) declaredModulePaths.addAll(withoutGlobs(rust.workspaceMembers()));
+        declaredModulePaths.addAll(withoutGlobs(goWorkMembers));
 
         List<AnalyzedProject> modules = new ArrayList<>();
         for (String modulePath : declaredModulePaths) {
@@ -51,9 +62,9 @@ public class AnalyzeProject {
             }
         }
 
-        ProjectSummary summary = buildSummary(pom, npm, modules.stream().map(AnalyzedProject::summary).toList());
+        ProjectSummary summary = buildSummary(pom, npm, rust, go, modules.stream().map(AnalyzedProject::summary).toList());
 
-        return new AnalyzedProject(dir, pom, npm, summary, modules);
+        return new AnalyzedProject(dir, pom, npm, rust, go, summary, modules);
     }
 
     private static List<String> withoutGlobs(List<String> entries) {
@@ -197,12 +208,123 @@ public class AnalyzeProject {
         return node == null || node.isNull() ? null : node.asText();
     }
 
+    // --- Cargo.toml ---
+
+    private static RustInfo parseCargoToml(Path cargoTomlPath) throws Exception {
+        Toml toml = new Toml().read(cargoTomlPath.toFile());
+
+        Map<String, String> dependencies = new LinkedHashMap<>();
+        Toml depsTable = toml.getTable("dependencies");
+        if (depsTable != null) {
+            for (Map.Entry<String, Object> entry : depsTable.toMap().entrySet()) {
+                Object value = entry.getValue();
+                String version = null;
+                if (value instanceof String s) {
+                    version = s;
+                } else if (value instanceof Map<?, ?> m && m.get("version") instanceof String s) {
+                    version = s;
+                }
+                if (version != null) {
+                    dependencies.put(entry.getKey(), version);
+                }
+            }
+        }
+
+        List<String> workspaceMembers = new ArrayList<>();
+        List<Object> members = toml.getList("workspace.members");
+        if (members != null) {
+            for (Object m : members) {
+                workspaceMembers.add(String.valueOf(m));
+            }
+        }
+
+        return new RustInfo(
+            toml.getString("package.name"),
+            toml.getString("package.version"),
+            toml.getString("package.rust-version"),
+            dependencies,
+            workspaceMembers
+        );
+    }
+
+    // --- go.mod / go.work ---
+    // Ni JSON ni TOML : parsées ligne à ligne, sans dépendance (format
+    // simple et stable).
+
+    private static GoInfo parseGoMod(Path goModPath) throws Exception {
+        List<String> lines = Files.readAllLines(goModPath).stream().map(String::trim).toList();
+
+        String moduleLine = lines.stream().filter(l -> l.startsWith("module ")).findFirst().orElse(null);
+        String goLine = lines.stream().filter(l -> l.matches("^go\\s+\\d.*")).findFirst().orElse(null);
+
+        Map<String, String> dependencies = new LinkedHashMap<>();
+        boolean inRequireBlock = false;
+        for (String line : lines) {
+            if (line.startsWith("require (")) {
+                inRequireBlock = true;
+                continue;
+            }
+            if (inRequireBlock) {
+                if (line.equals(")")) {
+                    inRequireBlock = false;
+                    continue;
+                }
+                String[] parts = line.split("\\s+");
+                if (parts.length >= 2) {
+                    dependencies.put(parts[0], parts[1]);
+                }
+                continue;
+            }
+            Matcher matcher = REQUIRE_LINE.matcher(line);
+            if (matcher.find()) {
+                dependencies.put(matcher.group(1), matcher.group(2));
+            }
+        }
+
+        return new GoInfo(
+            moduleLine != null ? moduleLine.substring("module ".length()).trim() : null,
+            goLine != null ? goLine.substring("go ".length()).trim() : null,
+            dependencies
+        );
+    }
+
+    private static List<String> parseGoWorkMembers(Path goWorkPath) throws Exception {
+        List<String> lines = Files.readAllLines(goWorkPath).stream().map(String::trim).toList();
+
+        List<String> members = new ArrayList<>();
+        boolean inUseBlock = false;
+        for (String line : lines) {
+            if (line.startsWith("use (")) {
+                inUseBlock = true;
+                continue;
+            }
+            if (inUseBlock) {
+                if (line.equals(")")) {
+                    inUseBlock = false;
+                    continue;
+                }
+                if (!line.isEmpty()) members.add(line);
+                continue;
+            }
+            Matcher matcher = USE_LINE.matcher(line);
+            if (matcher.find()) {
+                members.add(matcher.group(1));
+            }
+        }
+
+        return members;
+    }
+
     // --- résumé agrégé (bottom-up) ---
 
-    private static ProjectSummary buildSummary(PomInfo pom, NpmInfo npm, List<ProjectSummary> childSummaries) {
+    private static ProjectSummary buildSummary(
+        PomInfo pom, NpmInfo npm, RustInfo rust, GoInfo go, List<ProjectSummary> childSummaries
+    ) {
         List<String> ownJava = new ArrayList<>();
         List<String> ownSpringBoot = new ArrayList<>();
         List<String> ownAngular = new ArrayList<>();
+        List<String> ownRust = new ArrayList<>();
+        List<String> ownGo = new ArrayList<>();
 
         if (pom != null) {
             String javaVersion = firstNonNull(
@@ -232,10 +354,20 @@ public class AnalyzeProject {
             if (angularVersion != null) ownAngular.add(angularVersion);
         }
 
+        if (rust != null && rust.rustVersion() != null) {
+            ownRust.add(rust.rustVersion());
+        }
+
+        if (go != null && go.goVersion() != null) {
+            ownGo.add(go.goVersion());
+        }
+
         return new ProjectSummary(
             mergeUnique(ownJava, childSummaries.stream().map(ProjectSummary::javaVersion).toList()),
             mergeUnique(ownSpringBoot, childSummaries.stream().map(ProjectSummary::springBootVersion).toList()),
-            mergeUnique(ownAngular, childSummaries.stream().map(ProjectSummary::angularVersion).toList())
+            mergeUnique(ownAngular, childSummaries.stream().map(ProjectSummary::angularVersion).toList()),
+            mergeUnique(ownRust, childSummaries.stream().map(ProjectSummary::rustVersion).toList()),
+            mergeUnique(ownGo, childSummaries.stream().map(ProjectSummary::goVersion).toList())
         );
     }
 
