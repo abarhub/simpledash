@@ -7,8 +7,8 @@ empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 **Statut : domaines `système`, `serveurs` et `projects` portés**, ce
 dernier avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
 extracteur Git (dernier commit, branche, statut, avance/retard sur le
-remote, via `ProcessBuilder`). `jira`, `bitbucket`, `bamboo`, `sonar`
-restent à porter.
+remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
+place ; `jira`, `bitbucket`, `bamboo`, `sonar` restent à porter.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
@@ -52,6 +52,21 @@ pointer vers l'un ou l'autre.
 mvn package
 java -jar target/simpledash-backend.jar   # http://localhost:3008 (ou $PORT)
 ```
+
+## Credentials (`.env`)
+
+Copie `.env.example` en `.env` (non versionné, ignoré comme côté Node) et
+renseigne les variables des domaines authentifiés (`JIRA_*`,
+`BITBUCKET_*`, `BAMBOO_*`, `SONAR_*`). Un domaine dont les variables ne
+sont pas renseignées reste vide (pas d'erreur), il n'apparaît juste sans
+ressource à sélectionner — même comportement que côté Node.
+
+Contrairement à Node (`node --env-file-if-exists=.env`, flag CLI natif),
+Java n'a pas d'équivalent intégré : `Env.get(...)`
+(`lib/Env.java`) charge lui-même `.env` depuis le répertoire courant au
+premier appel (suppose un lancement depuis `backend-java/`, comme
+`ProjectsConfig`). Une vraie variable d'environnement du process a
+toujours priorité sur la valeur du fichier, comme côté Node.
 
 ## Notes de portage
 
