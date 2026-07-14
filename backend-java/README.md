@@ -4,14 +4,20 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système` et `serveurs` portés.** `jira`, `bitbucket`,
-`bamboo`, `sonar` restent à porter. `projects` est en cours : ses deux
-briques (`com.simpledash.lib.FindProjects` et `AnalyzeProject`, équivalents
-de `backend/src/lib/findProjects.js` et `analyzeProject.js`) sont écrites
-et testées, mais pas encore branchées à un domaine — même découpage par
-étapes que côté Node à l'époque. `AnalyzeProject` ne gère pour l'instant que
-`pom.xml`/`package.json` (pas de dépendance TOML ajoutée pour Cargo.toml,
-pas de parsing go.mod/go.work) ; Rust/Go suivront dans une PR séparée.
+**Statut : domaines `système`, `serveurs` et `projects` portés** (ce
+dernier pour `pom.xml`/`package.json` uniquement — pas de dépendance TOML
+ajoutée pour Cargo.toml, pas de parsing go.mod/go.work ; Rust/Go suivront
+dans une PR séparée, comme côté Node à l'époque). `jira`, `bitbucket`,
+`bamboo`, `sonar` restent à porter.
+
+`ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
+défaut le repo lui-même, en repartant du dossier courant — suppose un
+lancement depuis `backend-java/`) à chaque appel, comme côté Node ; adapte
+`ProjectsConfig` vers tes vrais dossiers de projets.
+
+**Cette étape d'intégration n'a pas pu être vérifiée en conditions réelles**
+(pas de preview navigateur possible ici, en plus de ne pas pouvoir
+compiler) — à tester particulièrement attentivement.
 
 Compile et testé avec `mvn clean compile` / `mvn test`.
 
