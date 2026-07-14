@@ -5,8 +5,10 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
 **Statut : domaines `système`, `serveurs` et `projects` portés**, ce
-dernier avec pom.xml/package.json/Cargo.toml/go.mod/go.work. `jira`,
-`bitbucket`, `bamboo`, `sonar` restent à porter.
+dernier avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
+extracteur Git (dernier commit, branche, statut, avance/retard sur le
+remote, via `ProcessBuilder`). `jira`, `bitbucket`, `bamboo`, `sonar`
+restent à porter.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
@@ -70,3 +72,8 @@ java -jar target/simpledash-backend.jar   # http://localhost:3008 (ou $PORT)
 - `system-info` simplifié par rapport à la version Node : pas d'équivalent
   standard multi-OS à l'uptime système en Java (seul l'uptime du process
   JVM est exposé), et le modèle CPU n'est pas exposé nativement.
+- `GitInfoExtractorTest` utilise `@TempDir` (nettoyage géré par JUnit,
+  sans les options de retry qu'on avait dû ajouter côté Node pour un
+  `EBUSY` Windows après un sous-processus `git`) — si le même problème
+  apparaît ici, il faudra gérer les répertoires temporaires à la main
+  avec une logique de retry équivalente.
