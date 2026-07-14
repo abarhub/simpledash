@@ -7,9 +7,9 @@ du FS, etc.) et renvoie une ou plusieurs "cards" par ressource × info.
 ## Concepts
 
 - **Domaine** — une catégorie de choses interrogeables : `système`,
-  `projets`, `serveurs`, `jira`, `bitbucket`. Chaque domaine vit dans
-  `backend/src/domains/<nom>/` et a sa propre config, ses ressources et ses
-  extracteurs.
+  `projets`, `serveurs`, `jira`, `bitbucket`, `bamboo`, `sonar`. Chaque
+  domaine vit dans `backend/src/domains/<nom>/` et a sa propre config, ses
+  ressources et ses extracteurs.
 - **Ressource** — une instance d'un domaine (un projet précis, un serveur
   précis, une requête JQL nommée, un dépôt Bitbucket), déclarée dans
   `config.js` avec un ou plusieurs `types` (ex: `npm`, `maven`, `http`,
@@ -63,24 +63,28 @@ Le tout écoute sur `PORT` (défaut `3008`). En dev, le frontend continue de
 tourner séparément via `npm run dev` (proxy Vite vers le backend) ; en prod
 c'est uniquement le backend qui tourne.
 
-## Domaines Jira / Bitbucket (serveurs on-premise)
+## Domaines Jira / Bitbucket / Bamboo / Sonar (serveurs on-premise)
 
-Ces deux domaines appellent des instances **Server / Data Center** (pas
-Cloud) en Personal Access Token. Copier `backend/.env.example` vers
-`backend/.env` et renseigner les URLs/tokens ; un domaine dont les variables
-ne sont pas renseignées reste simplement vide (pas d'erreur au démarrage).
-Les ressources (requêtes JQL nommées, dépôts Bitbucket) se déclarent à la
-main dans `backend/src/domains/jira/config.js` et
-`backend/src/domains/bitbucket/config.js`.
+Ces domaines appellent des instances **Server / Data Center** (pas Cloud).
+Copier `backend/.env.example` vers `backend/.env` et renseigner les
+URLs/tokens ; un domaine dont les variables ne sont pas renseignées reste
+simplement vide (pas d'erreur au démarrage). Les ressources (requêtes JQL
+nommées, dépôts Bitbucket, plans Bamboo, projets Sonar) se déclarent à la
+main dans le `config.js` de chaque domaine.
+
+Auth : Jira, Bitbucket et Bamboo utilisent un Personal Access Token en
+Bearer (`Authorization: Bearer <token>`). **SonarQube fait exception** : le
+token s'envoie en Basic Auth (token comme nom d'utilisateur, mot de passe
+vide) — pas de Bearer.
 
 Non testé contre de vrais serveurs (pas d'accès réseau depuis l'environnement
 de développement) — à vérifier après configuration.
 
-**Certificat TLS interne** : si le serveur Jira/Bitbucket utilise une CA
-interne (cas courant en on-premise), les appels `fetch` échoueront tant que
-Node ne connaît pas cette CA. La bonne approche est la variable
-d'environnement native `NODE_EXTRA_CA_CERTS` (fait confiance à la CA sans
-désactiver la vérification TLS globalement) :
+**Certificat TLS interne** : si un de ces serveurs utilise une CA interne
+(cas courant en on-premise), les appels `fetch` échoueront tant que Node ne
+connaît pas cette CA. La bonne approche est la variable d'environnement
+native `NODE_EXTRA_CA_CERTS` (fait confiance à la CA sans désactiver la
+vérification TLS globalement) :
 
 ```bash
 NODE_EXTRA_CA_CERTS=/chemin/vers/ca-interne.pem npm run dev

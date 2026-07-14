@@ -3,8 +3,10 @@ import projects from './projects/index.js';
 import servers from './servers/index.js';
 import jira from './jira/index.js';
 import bitbucket from './bitbucket/index.js';
+import bamboo from './bamboo/index.js';
+import sonar from './sonar/index.js';
 
-const domains = [system, projects, servers, jira, bitbucket];
+const domains = [system, projects, servers, jira, bitbucket, bamboo, sonar];
 
 export function listDomains() {
   return domains.map(({ id, name }) => ({ id, name }));
