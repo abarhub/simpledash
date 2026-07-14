@@ -4,24 +4,22 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système`, `serveurs` et `projects` portés**, ce
-dernier avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
+**Statut : domaines `système`, `serveurs`, `projects` et `jira` portés**,
+`projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
 extracteur Git (dernier commit, branche, statut, avance/retard sur le
 remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
-place ; `jira`, `bitbucket`, `bamboo`, `sonar` restent à porter.
+place ; `bitbucket`, `bamboo`, `sonar` restent à porter.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
 lancement depuis `backend-java/`) à chaque appel, comme côté Node ; adapte
 `ProjectsConfig` vers tes vrais dossiers de projets.
 
-**Le branchement du domaine `projects` (`ProjectsDomain` et ses
-extracteurs) n'a pas pu être vérifié en conditions réelles** (pas de
-preview navigateur possible ici, en plus de ne pas pouvoir compiler) — à
-tester particulièrement attentivement. `AnalyzeProject`/`FindProjects`
-eux-mêmes ont leur couverture de tests.
-
-Compile et testé avec `mvn clean compile` / `mvn test`.
+Compile et testé avec `mvn clean test` / `mvn package` (Maven est
+disponible dans cet environnement depuis le domaine `jira` : premiers
+domaines réellement compilés et lancés, `/api/domains/*` vérifiés à la
+main avec `curl` contre le jar packagé — `système`, `serveurs` et
+`projects`, écrits avant, n'avaient pu être vérifiés qu'à la lecture).
 
 ## Structure
 
@@ -92,3 +90,12 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   `EBUSY` Windows après un sous-processus `git`) — si le même problème
   apparaît ici, il faudra gérer les répertoires temporaires à la main
   avec une logique de retry équivalente.
+- **Dates Jira** : le champ `updated` renvoyé par l'API Jira utilise un
+  offset sans deux-points (`+0000`), pas le format `OffsetDateTime.parse`
+  par défaut (`ISO_OFFSET_DATE_TIME`) — `IssuesExtractor` utilise un
+  `DateTimeFormatter` dédié (motif `Z`) plutôt que le format implicite.
+- **Tests HTTP** : comme `HttpStatusExtractorTest`, `IssuesExtractorTest`
+  démarre un vrai `com.sun.net.httpserver.HttpServer` local plutôt que de
+  mocker le client HTTP, pour garder la même philosophie de test que côté
+  Node (fichiers/process réels) même si Node, lui, mocke `fetch` sur ce
+  point précis.

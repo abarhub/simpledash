@@ -2,6 +2,7 @@ package com.simpledash;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simpledash.domains.DomainRegistry;
+import com.simpledash.domains.jira.JiraDomain;
 import com.simpledash.domains.projects.ProjectsDomain;
 import com.simpledash.domains.servers.ServersDomain;
 import com.simpledash.domains.system.SystemDomain;
@@ -21,7 +22,8 @@ public class Main {
         DomainRegistry registry = new DomainRegistry(List.of(
             new SystemDomain(),
             new ServersDomain(),
-            new ProjectsDomain()
+            new ProjectsDomain(),
+            new JiraDomain()
         ));
 
         Javalin app = Javalin.create();
