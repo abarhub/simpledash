@@ -4,6 +4,11 @@ Dashboard modulaire : le front sélectionne un domaine, des ressources (ou un
 groupe) et les infos voulues ; le backend les traite (appel distant, lecture
 du FS, etc.) et renvoie une ou plusieurs "cards" par ressource × info.
 
+`backend/` (Node/Express) est le backend actuel. `backend-java/` est un
+portage en cours vers Java/Javalin (démarrage plus rapide, empreinte
+mémoire plus faible) — voir [backend-java/README.md](backend-java/README.md)
+pour son état d'avancement.
+
 ## Concepts
 
 - **Domaine** — une catégorie de choses interrogeables : `système`,
