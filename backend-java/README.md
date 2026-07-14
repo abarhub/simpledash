@@ -4,12 +4,12 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système`, `serveurs`, `projects`, `jira`,
-`bitbucket` et `bamboo` portés**, `projects` avec
-pom.xml/package.json/Cargo.toml/go.mod/go.work + un extracteur Git
-(dernier commit, branche, statut, avance/retard sur le remote, via
-`ProcessBuilder`). La gestion des credentials (`.env`) est en place ;
-`sonar` reste à porter.
+**Statut : les 7 domaines du backend Node sont portés** (`système`,
+`serveurs`, `projects`, `jira`, `bitbucket`, `bamboo`, `sonar`),
+`projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
+extracteur Git (dernier commit, branche, statut, avance/retard sur le
+remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
+place pour les 4 domaines authentifiés.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
@@ -95,9 +95,10 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   offset sans deux-points (`+0000`), pas le format `OffsetDateTime.parse`
   par défaut (`ISO_OFFSET_DATE_TIME`) — `IssuesExtractor` utilise un
   `DateTimeFormatter` dédié (motif `Z`) plutôt que le format implicite.
-- **Tests HTTP** : comme `HttpStatusExtractorTest`, `IssuesExtractorTest`,
-  `PullRequestsExtractorTest` et `BuildStatusExtractorTest` démarrent un
-  vrai `com.sun.net.httpserver.HttpServer` local plutôt que de mocker le
+- **Tests HTTP** : comme `HttpStatusExtractorTest`, tous les extracteurs
+  HTTP (`IssuesExtractorTest`, `PullRequestsExtractorTest`,
+  `BuildStatusExtractorTest`, `QualityExtractorTest`) démarrent un vrai
+  `com.sun.net.httpserver.HttpServer` local plutôt que de mocker le
   client HTTP, pour garder la même philosophie de test que côté Node
   (fichiers/process réels) même si Node, lui, mocke `fetch` sur ce point
   précis.
@@ -115,3 +116,12 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   exception dans une `ExecutionException`, un petit `await(...)` la
   déballe pour que `getMessage()` reste `"Erreur Bamboo: ..."` telle
   quelle plutôt que noyée dans le message de l'enveloppe.
+- **Sonar** : auth Basic (token en nom d'utilisateur, mot de passe vide —
+  encodé en base64 avec `Base64.getEncoder()`), pas de Bearer comme les 3
+  autres domaines. Le format de date des analyses (`+0200`, sans
+  deux-points ni millisecondes) diffère à la fois de Jira et de Bamboo,
+  d'où un troisième `DateTimeFormatter` dédié. Les métriques Sonar sont
+  des chaînes ("0.0" inclus) : comme en JS où seule une chaîne vide/nulle
+  est "falsy", `QualityExtractor` teste la présence de la valeur plutôt
+  que sa valeur numérique, pour ne pas afficher "?" sur une couverture ou
+  une duplication à 0.

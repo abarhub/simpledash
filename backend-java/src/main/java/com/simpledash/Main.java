@@ -7,6 +7,7 @@ import com.simpledash.domains.bitbucket.BitbucketDomain;
 import com.simpledash.domains.jira.JiraDomain;
 import com.simpledash.domains.projects.ProjectsDomain;
 import com.simpledash.domains.servers.ServersDomain;
+import com.simpledash.domains.sonar.SonarDomain;
 import com.simpledash.domains.system.SystemDomain;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -27,7 +28,8 @@ public class Main {
             new ProjectsDomain(),
             new JiraDomain(),
             new BitbucketDomain(),
-            new BambooDomain()
+            new BambooDomain(),
+            new SonarDomain()
         ));
 
         Javalin app = Javalin.create();
