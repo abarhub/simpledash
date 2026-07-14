@@ -20,11 +20,11 @@ public class SummaryExtractor implements Extractor {
     }
 
     public String description() {
-        return "Versions clés détectées (Java, Spring Boot, Angular), y compris dans les sous-modules";
+        return "Versions clés détectées (Java, Spring Boot, Angular, Rust, Go), y compris dans les sous-modules";
     }
 
     public List<String> compatibleTypes() {
-        return List.of("npm", "maven");
+        return List.of("npm", "maven", "rust", "go");
     }
 
     public List<ExtractorWidget> fetch(Resource resource) throws Exception {
@@ -35,6 +35,8 @@ public class SummaryExtractor implements Extractor {
         putIfNotEmpty(data, "Java", summary.javaVersion());
         putIfNotEmpty(data, "Spring Boot", summary.springBootVersion());
         putIfNotEmpty(data, "Angular", summary.angularVersion());
+        putIfNotEmpty(data, "Rust", summary.rustVersion());
+        putIfNotEmpty(data, "Go", summary.goVersion());
 
         if (data.isEmpty()) {
             data.put("Résumé", "aucune info détectée");

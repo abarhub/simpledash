@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -255,6 +256,119 @@ class AnalyzeProjectTest {
         Files.createDirectories(dir.resolve("packages").resolve("pkg-a"));
         Files.writeString(dir.resolve("packages").resolve("pkg-a").resolve("package.json"), """
             { "name": "pkg-a", "version": "0.1.0" }
+            """);
+
+        var result = AnalyzeProject.analyzeProject(dir);
+
+        assertTrue(result.modules().isEmpty());
+    }
+
+    @Test
+    void cargoTomlOnly(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Cargo.toml"), """
+            [package]
+            name = "my-crate"
+            version = "0.3.1"
+            rust-version = "1.75"
+
+            [dependencies]
+            serde = "1.0"
+            tokio = { version = "1.35", features = ["full"] }
+            """);
+
+        var result = AnalyzeProject.analyzeProject(dir);
+
+        assertEquals("my-crate", result.rust().name());
+        assertEquals("0.3.1", result.rust().version());
+        assertEquals("1.75", result.rust().rustVersion());
+        assertEquals(Map.of("serde", "1.0", "tokio", "1.35"), result.rust().dependencies());
+        assertEquals(List.of("1.75"), result.summary().rustVersion());
+        assertTrue(result.modules().isEmpty());
+    }
+
+    @Test
+    void goModWithBlockAndSingleLineRequire(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("go.mod"), """
+            module github.com/example/my-service
+
+            go 1.21
+
+            require github.com/gin-gonic/gin v1.9.1
+
+            require (
+                github.com/foo/bar v1.2.3
+                github.com/baz/qux v0.5.0 // indirect
+            )
+            """);
+
+        var result = AnalyzeProject.analyzeProject(dir);
+
+        assertEquals("github.com/example/my-service", result.go().module());
+        assertEquals("1.21", result.go().goVersion());
+        assertEquals(
+            Map.of(
+                "github.com/gin-gonic/gin", "v1.9.1",
+                "github.com/foo/bar", "v1.2.3",
+                "github.com/baz/qux", "v0.5.0"
+            ),
+            result.go().dependencies()
+        );
+        assertEquals(List.of("1.21"), result.summary().goVersion());
+    }
+
+    @Test
+    void cargoWorkspaceMemberIsAnalyzed(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Cargo.toml"), """
+            [workspace]
+            members = ["crates/crate-a"]
+            """);
+        Files.createDirectories(dir.resolve("crates").resolve("crate-a"));
+        Files.writeString(dir.resolve("crates").resolve("crate-a").resolve("Cargo.toml"), """
+            [package]
+            name = "crate-a"
+            version = "0.1.0"
+            """);
+
+        var result = AnalyzeProject.analyzeProject(dir);
+
+        assertEquals(1, result.modules().size());
+        assertEquals("crate-a", result.modules().get(0).rust().name());
+    }
+
+    @Test
+    void goWorkMembersAreAnalyzedEvenWithoutRootGoMod(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("go.work"), """
+            go 1.21
+
+            use (
+                ./service-a
+                ./service-b
+            )
+            """);
+        Files.createDirectory(dir.resolve("service-a"));
+        Files.writeString(dir.resolve("service-a").resolve("go.mod"), "module github.com/example/service-a\n\ngo 1.21\n");
+        Files.createDirectory(dir.resolve("service-b"));
+        Files.writeString(dir.resolve("service-b").resolve("go.mod"), "module github.com/example/service-b\n\ngo 1.21\n");
+
+        var result = AnalyzeProject.analyzeProject(dir);
+
+        assertNull(result.go());
+        assertEquals(2, result.modules().size());
+        var modules = result.modules().stream().map(m -> m.go().module()).sorted().toList();
+        assertEquals(List.of("github.com/example/service-a", "github.com/example/service-b"), modules);
+    }
+
+    @Test
+    void globPatternInCargoWorkspaceMembersIsNotResolved(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Cargo.toml"), """
+            [workspace]
+            members = ["crates/*"]
+            """);
+        Files.createDirectories(dir.resolve("crates").resolve("crate-a"));
+        Files.writeString(dir.resolve("crates").resolve("crate-a").resolve("Cargo.toml"), """
+            [package]
+            name = "crate-a"
+            version = "0.1.0"
             """);
 
         var result = AnalyzeProject.analyzeProject(dir);

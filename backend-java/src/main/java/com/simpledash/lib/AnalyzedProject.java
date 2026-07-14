@@ -7,6 +7,8 @@ public record AnalyzedProject(
     Path dir,
     PomInfo pom,
     NpmInfo npm,
+    RustInfo rust,
+    GoInfo go,
     ProjectSummary summary,
     List<AnalyzedProject> modules
 ) {}
