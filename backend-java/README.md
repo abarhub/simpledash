@@ -52,6 +52,20 @@ mvn package
 java -jar target/simpledash-backend.jar   # http://localhost:3008 (ou $PORT)
 ```
 
+### Déploiement mono-serveur
+
+Comme côté Node (`backend/src/index.js`), si `../frontend/dist` existe
+(après un `npm run build` côté frontend), `Main.java` sert ce dossier en
+statique et retombe sur `index.html` pour toute route non-`/api` non
+trouvée (routage côté client) — via `config.staticFiles.add(...)` et
+`config.spaRoot.addFile("/", ...)` de Javalin. Suppose un lancement
+depuis `backend-java/`, comme `ProjectsConfig`. En dev (`frontend/dist`
+absent), l'API répond normalement et rien n'est servi à la racine.
+Vérifié en conditions réelles (jar packagé + frontend buildé) : page,
+assets et repli SPA tous corrects — y compris le même comportement que
+Node sur un chemin non-`/api` qui ressemble à un asset mais n'existe pas
+(repli sur `index.html` avec 200, pas de vrai 404).
+
 ## Credentials (`.env`)
 
 Copie `.env.example` en `.env` (non versionné, ignoré comme côté Node) et
@@ -73,6 +87,10 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   `Main.java`) plutôt que le mapper JSON par défaut de Javalin, pour rester
   indépendant de la configuration du plugin JSON de Javalin.
 - **CORS** : géré à la main (`app.before(...)`) plutôt que via le plugin CORS.
+- **Fichiers statiques** : `config.staticFiles.add(...)` / `config.spaRoot.addFile(...)`
+  (API confirmée via `javap` sur le jar Javalin, puis vérifiée à l'exécution) plutôt que du
+  `app.before`/`app.get("*", ...)` fait main, contrairement au choix pour JSON/CORS ci-dessus
+  — l'API de plugin est ici la voie la plus simple et a pu être vérifiée avec certitude.
 - **Concurrence** : `Promise.all` (Node) → threads virtuels (Java 21+), pas
   de `CompletableFuture` imbriqués.
 - **XML/HTTP client** : contrairement à Node, le JDK a un parseur XML natif

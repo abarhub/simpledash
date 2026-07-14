@@ -11,6 +11,9 @@ import com.simpledash.domains.sonar.SonarDomain;
 import com.simpledash.domains.system.SystemDomain;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+import io.javalin.http.staticfiles.Location;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +35,23 @@ public class Main {
             new SonarDomain()
         ));
 
-        Javalin app = Javalin.create();
+        // Sert le frontend buildé (npm run build côté frontend) s'il existe, pour
+        // pouvoir déployer front + back en un seul process/port. En dev, le
+        // frontend tourne séparément (npm run dev + proxy Vite) et ce dossier
+        // n'existe pas encore. Suppose un lancement depuis backend-java/, comme
+        // ProjectsConfig.
+        Path frontendDist = Path.of("..", "frontend", "dist").normalize();
+        boolean serveFrontend = Files.isDirectory(frontendDist);
+
+        Javalin app = Javalin.create(config -> {
+            if (serveFrontend) {
+                config.staticFiles.add(staticFiles -> {
+                    staticFiles.directory = frontendDist.toString();
+                    staticFiles.location = Location.EXTERNAL;
+                });
+                config.spaRoot.addFile("/", frontendDist.resolve("index.html").toString(), Location.EXTERNAL);
+            }
+        });
 
         // CORS géré à la main plutôt qu'via le plugin Javalin, pour ne pas
         // dépendre d'une API de plugin dont je ne suis pas certain à 100%
