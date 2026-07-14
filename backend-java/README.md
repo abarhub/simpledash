@@ -4,9 +4,13 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système` et `serveurs` portés.** `projects`, `jira`,
-`bitbucket`, `bamboo`, `sonar` restent à porter, un par un, dans des PR
-séparées — comme pour la version Node à l'origine.
+**Statut : domaines `système` et `serveurs` portés.** `jira`, `bitbucket`,
+`bamboo`, `sonar` restent à porter. `projects` est en cours : sa brique de
+découverte (`com.simpledash.lib.FindProjects`, équivalent de
+`backend/src/lib/findProjects.js`) est écrite et testée, mais pas encore
+branchée à un domaine — même découpage par étapes que côté Node à
+l'époque (`findProjects` puis `analyzeProject` puis leur intégration,
+dans des PR séparées).
 
 Compile et testé avec `mvn clean compile` / `mvn test`.
 
