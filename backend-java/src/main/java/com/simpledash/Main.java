@@ -2,6 +2,7 @@ package com.simpledash;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simpledash.domains.DomainRegistry;
+import com.simpledash.domains.projects.ProjectsDomain;
 import com.simpledash.domains.servers.ServersDomain;
 import com.simpledash.domains.system.SystemDomain;
 import io.javalin.Javalin;
@@ -19,7 +20,8 @@ public class Main {
 
         DomainRegistry registry = new DomainRegistry(List.of(
             new SystemDomain(),
-            new ServersDomain()
+            new ServersDomain(),
+            new ProjectsDomain()
         ));
 
         Javalin app = Javalin.create();
