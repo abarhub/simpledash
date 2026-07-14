@@ -2,6 +2,7 @@ package com.simpledash;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simpledash.domains.DomainRegistry;
+import com.simpledash.domains.bamboo.BambooDomain;
 import com.simpledash.domains.bitbucket.BitbucketDomain;
 import com.simpledash.domains.jira.JiraDomain;
 import com.simpledash.domains.projects.ProjectsDomain;
@@ -25,7 +26,8 @@ public class Main {
             new ServersDomain(),
             new ProjectsDomain(),
             new JiraDomain(),
-            new BitbucketDomain()
+            new BitbucketDomain(),
+            new BambooDomain()
         ));
 
         Javalin app = Javalin.create();

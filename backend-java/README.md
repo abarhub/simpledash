@@ -4,11 +4,12 @@ Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/
 (fine couche sur Jetty), motivé par le démarrage rapide et la faible
 empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
 
-**Statut : domaines `système`, `serveurs`, `projects`, `jira` et
-`bitbucket` portés**, `projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work
-+ un extracteur Git (dernier commit, branche, statut, avance/retard sur le
-remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
-place ; `bamboo`, `sonar` restent à porter.
+**Statut : domaines `système`, `serveurs`, `projects`, `jira`,
+`bitbucket` et `bamboo` portés**, `projects` avec
+pom.xml/package.json/Cargo.toml/go.mod/go.work + un extracteur Git
+(dernier commit, branche, statut, avance/retard sur le remote, via
+`ProcessBuilder`). La gestion des credentials (`.env`) est en place ;
+`sonar` reste à porter.
 
 `ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
 défaut le repo lui-même, en repartant du dossier courant — suppose un
@@ -94,9 +95,9 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   offset sans deux-points (`+0000`), pas le format `OffsetDateTime.parse`
   par défaut (`ISO_OFFSET_DATE_TIME`) — `IssuesExtractor` utilise un
   `DateTimeFormatter` dédié (motif `Z`) plutôt que le format implicite.
-- **Tests HTTP** : comme `HttpStatusExtractorTest`, `IssuesExtractorTest`
-  et `PullRequestsExtractorTest` démarrent un vrai
-  `com.sun.net.httpserver.HttpServer` local plutôt que de mocker le
+- **Tests HTTP** : comme `HttpStatusExtractorTest`, `IssuesExtractorTest`,
+  `PullRequestsExtractorTest` et `BuildStatusExtractorTest` démarrent un
+  vrai `com.sun.net.httpserver.HttpServer` local plutôt que de mocker le
   client HTTP, pour garder la même philosophie de test que côté Node
   (fichiers/process réels) même si Node, lui, mocke `fetch` sur ce point
   précis.
@@ -105,3 +106,12 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   `Instant.ofEpochMilli(...)` avec le fuseau par défaut de la JVM, comme
   `new Date(ms).toLocaleDateString('fr-FR')` côté Node utilise le fuseau
   du process.
+- **Bamboo** : `buildStartedTime` est au format ISO avec deux-points dans
+  l'offset (`+02:00`), donc `OffsetDateTime.parse` par défaut suffit,
+  contrairement à Jira. `BuildStatusExtractor.fetch` lance le résultat du
+  plan principal et la liste des branches en parallèle (threads
+  virtuels), puis le résultat de chaque branche, comme les `Promise.all`
+  imbriqués de `build-status.js` — `Future.get()` enveloppant toute
+  exception dans une `ExecutionException`, un petit `await(...)` la
+  déballe pour que `getMessage()` reste `"Erreur Bamboo: ..."` telle
+  quelle plutôt que noyée dans le message de l'enveloppe.
