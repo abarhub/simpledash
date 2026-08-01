@@ -126,6 +126,67 @@ pointant vers `backend-java/`, `backend/` et `frontend/` de ce repo :
 détection correcte des types (`maven`/`npm`), et filtrage du groupe
 configuré à la seule ressource concernée.
 
+## Certificat TLS interne
+
+Si Jira/Bitbucket/Bamboo/Sonar tournent derrière une CA interne (cas
+courant en on-premise), les appels `HttpClient` échoueront tant que la
+JVM ne connaît pas cette CA — même symptôme que côté Node, mais pas le
+même mécanisme ni la même solution.
+
+Côté Node, `NODE_EXTRA_CA_CERTS` **ajoute** une CA à celles déjà connues
+(voir le [README racine](../README.md)). La JVM n'a pas d'équivalent
+additif intégré : `-Djavax.net.ssl.trustStore=...` **remplace**
+entièrement le trust store par défaut. Pointer ce paramètre directement
+vers un fichier ne contenant que la CA interne casserait donc la
+confiance pour tout le reste (Bitbucket Cloud, GitHub, etc. si jamais
+appelés) — il faut d'abord fusionner la CA interne dans une **copie** du
+trust store fourni par le JDK :
+
+```bash
+cp "$JAVA_HOME/lib/security/cacerts" ./cacerts-avec-ca-interne
+keytool -import -trustcacerts -noprompt \
+  -alias ca-interne \
+  -file /chemin/vers/ca-interne.pem \
+  -keystore ./cacerts-avec-ca-interne \
+  -storepass changeit
+```
+
+(`changeit` est le mot de passe par défaut du `cacerts` fourni par le
+JDK — à ajuster si ta distribution l'a changé.)
+
+Puis, au lancement :
+
+```bash
+java -Djavax.net.ssl.trustStore=./cacerts-avec-ca-interne \
+     -Djavax.net.ssl.trustStorePassword=changeit \
+     -jar target/simpledash-backend.jar
+```
+
+Pour rester au plus près de l'ergonomie de `NODE_EXTRA_CA_CERTS=... npm
+run dev` (une variable d'environnement à définir avant de lancer, sans
+modifier la commande elle-même), la JVM reconnaît nativement
+`JAVA_TOOL_OPTIONS` pour ça :
+
+```bash
+JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=./cacerts-avec-ca-interne -Djavax.net.ssl.trustStorePassword=changeit" \
+java -jar target/simpledash-backend.jar
+```
+
+Comme côté Node où la variable doit être définie avant le lancement (pas
+dans `backend/.env`, chargé trop tard pour le module TLS), ces propriétés
+`-D`/`JAVA_TOOL_OPTIONS` doivent être présentes **au démarrage de la
+JVM** — pas dans `.env` ni `projects.yml`, qui sont lus par le code de
+l'appli bien après que `HttpClient.newHttpClient()` (champ statique de
+chaque extracteur HTTP) ait déjà capturé le `SSLContext` par défaut de la
+JVM.
+
+Éviter un `TrustManager` qui accepte tout (l'équivalent Java de
+`NODE_TLS_REJECT_UNAUTHORIZED=0`) : ça désactive la vérification pour
+tout le process plutôt que de faire confiance uniquement à la CA
+interne. Non testé contre un vrai serveur avec CA interne (même
+limitation que la section équivalente du README racine) — recette à
+vérifier après configuration.
+
 ## Notes de portage
 
 - **JSON** : sérialisation manuelle via Jackson (`ObjectMapper` direct dans
