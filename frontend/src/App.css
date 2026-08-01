@@ -320,7 +320,6 @@
 .card-body table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 
 .card-body td {
@@ -344,6 +343,10 @@
   color: #e5484d;
   font-size: 14px;
   margin: 0;
+}
+
+.widget-table {
+  table-layout: fixed;
 }
 
 .widget-table th {
