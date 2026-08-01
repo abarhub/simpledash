@@ -1,0 +1,27 @@
+# Copier en projects.yml (non versionné) et adapter vers tes vrais
+# dossiers. Absent, le domaine "projects" reste vide (pas d'erreur), comme
+# les domaines authentifiés sans .env.
+
+# Un ou plusieurs répertoires racines, scannés récursivement à la
+# recherche de projets (marqueurs : pom.xml, package.json, Cargo.toml,
+# go.mod) — le scan s'arrête dès qu'un marqueur est trouvé dans un
+# répertoire (pas de descente dans ses sous-dossiers).
+scanRoots:
+  - D:/projet/mon-appli-java
+  - D:/projet/dossier-avec-plusieurs-projets
+
+# Noms de répertoires à ignorer pendant le scan, en plus des ignorés par
+# défaut (node_modules, target, dist, build, out, .git, venv, .venv, env,
+# __pycache__).
+ignoreDirs:
+  - dossier-a-ignorer
+
+# Optionnel : regroupe des ressources déjà trouvées par le scan, par
+# chemin exact (pas par id, généré dynamiquement). Un groupe "Tous les
+# projets" est toujours ajouté automatiquement en plus.
+groups:
+  - id: mes-projets-java
+    name: Mes projets Java
+    paths:
+      - D:/projet/mon-appli-java/module-a
+      - D:/projet/mon-appli-java/module-b

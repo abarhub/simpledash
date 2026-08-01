@@ -42,7 +42,7 @@ public class ProjectsDomain implements Domain {
     public ResourceList listResources() {
         List<FindProjects.FoundProject> found = new ArrayList<>();
         for (Path root : ProjectsConfig.SCAN_ROOTS) {
-            found.addAll(FindProjects.findProjects(root));
+            found.addAll(FindProjects.findProjects(root, ProjectsConfig.IGNORE_DIRS));
         }
 
         List<Resource> resources = found.stream()

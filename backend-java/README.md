@@ -11,10 +11,9 @@ extracteur Git (dernier commit, branche, statut, avance/retard sur le
 remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
 place pour les 4 domaines authentifiés.
 
-`ProjectsDomain.listResources()` scanne `ProjectsConfig.SCAN_ROOTS` (par
-défaut le repo lui-même, en repartant du dossier courant — suppose un
-lancement depuis `backend-java/`) à chaque appel, comme côté Node ; adapte
-`ProjectsConfig` vers tes vrais dossiers de projets.
+`ProjectsDomain.listResources()` scanne les racines déclarées dans
+`projects.yml` (voir section dédiée plus bas) à chaque appel, comme côté
+Node.
 
 Compile et testé avec `mvn clean test` / `mvn package` (Maven est
 disponible dans cet environnement depuis le domaine `jira` : premiers
@@ -59,7 +58,7 @@ Comme côté Node (`backend/src/index.js`), si `../frontend/dist` existe
 statique et retombe sur `index.html` pour toute route non-`/api` non
 trouvée (routage côté client) — via `config.staticFiles.add(...)` et
 `config.spaRoot.addFile("/", ...)` de Javalin. Suppose un lancement
-depuis `backend-java/`, comme `ProjectsConfig`. En dev (`frontend/dist`
+depuis `backend-java/`, comme `Env`. En dev (`frontend/dist`
 absent), l'API répond normalement et rien n'est servi à la racine.
 Vérifié en conditions réelles (jar packagé + frontend buildé) : page,
 assets et repli SPA tous corrects — y compris le même comportement que
@@ -77,9 +76,55 @@ ressource à sélectionner — même comportement que côté Node.
 Contrairement à Node (`node --env-file-if-exists=.env`, flag CLI natif),
 Java n'a pas d'équivalent intégré : `Env.get(...)`
 (`lib/Env.java`) charge lui-même `.env` depuis le répertoire courant au
-premier appel (suppose un lancement depuis `backend-java/`, comme
-`ProjectsConfig`). Une vraie variable d'environnement du process a
-toujours priorité sur la valeur du fichier, comme côté Node.
+premier appel (suppose un lancement depuis `backend-java/`). Une vraie
+variable d'environnement du process a toujours priorité sur la valeur du
+fichier, comme côté Node.
+
+## Projets à scanner (`projects.yml`)
+
+Contrairement à Node (`backend/src/domains/projects/config.js`, un
+fichier JS édité directement), la liste des racines à scanner est
+externalisée dans un fichier YAML plutôt que codée en dur : copie
+`projects.yml.example` en `projects.yml` (non versionné, comme `.env`) à
+la racine de `backend-java/`, et adapte-le :
+
+```yaml
+scanRoots:
+  - D:/projet/mon-appli-java
+  - D:/projet/dossier-avec-plusieurs-projets
+ignoreDirs:
+  - dossier-a-ignorer
+groups:
+  - id: mes-projets-java
+    name: Mes projets Java
+    paths:
+      - D:/projet/mon-appli-java/module-a
+      - D:/projet/mon-appli-java/module-b
+```
+
+- `scanRoots` : un ou plusieurs répertoires, scannés récursivement par
+  `FindProjects` à la recherche de projets (marqueurs : `pom.xml`,
+  `package.json`, `Cargo.toml`, `go.mod`) — le scan s'arrête dès qu'un
+  marqueur est trouvé dans un répertoire (pas de descente dans ses
+  sous-dossiers).
+- `ignoreDirs` : noms de répertoires ignorés pendant le scan, **en plus**
+  des ignorés par défaut de `FindProjects` (`node_modules`, `target`,
+  `dist`, `build`, `out`, `.git`, `venv`, `.venv`, `env`, `__pycache__`).
+- `groups` (optionnel) : regroupe des ressources déjà trouvées par le
+  scan, par chemin exact (pas par id, généré dynamiquement). Un groupe
+  "Tous les projets" est toujours ajouté automatiquement en plus.
+
+Absent, le domaine reste vide (pas d'erreur), même comportement que les
+domaines authentifiés sans `.env`. Comme pour `.env`, c'est chargé une
+seule fois au premier accès (suppose un lancement depuis
+`backend-java/`) — modifier `projects.yml` nécessite un redémarrage du
+process (pas de rebuild : contrairement au code en dur d'avant, ce n'est
+plus compilé).
+
+Vérifié en conditions réelles (jar packagé) avec un `projects.yml`
+pointant vers `backend-java/`, `backend/` et `frontend/` de ce repo :
+détection correcte des types (`maven`/`npm`), et filtrage du groupe
+configuré à la seule ressource concernée.
 
 ## Notes de portage
 
@@ -101,6 +146,14 @@ toujours priorité sur la valeur du fichier, comme côté Node.
   API simple (accesseurs par chemin à points) plutôt que la plus récente
   `tomlj`, plus difficile à utiliser correctement sans pouvoir compiler ici
   pour vérifier.
+- **YAML (`projects.yml`)** : dépendance `jackson-dataformat-yaml` plutôt
+  que SnakeYAML directement, pour réutiliser le même style de
+  désérialisation (`ObjectMapper.readValue` vers un record) déjà en place
+  pour le JSON, plutôt qu'introduire une deuxième API de parsing. Les
+  records `RawConfig`/`RawGroup` de `ProjectsConfig` sont désérialisés
+  automatiquement (le plugin compilateur Maven a déjà `-parameters`
+  activé pour Javalin, ce qui suffit aussi à Jackson pour les records,
+  sans module ni annotation `@JsonCreator` supplémentaire).
 - `system-info` simplifié par rapport à la version Node : pas d'équivalent
   standard multi-OS à l'uptime système en Java (seul l'uptime du process
   JVM est exposé), et le modèle CPU n'est pas exposé nativement.
