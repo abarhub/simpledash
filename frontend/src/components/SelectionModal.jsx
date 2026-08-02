@@ -9,6 +9,7 @@ function SelectionModal({
   onSelectDomain,
   resources,
   groups,
+  resourcesLoading,
   selectedResourceIds,
   onToggleResource,
   onToggleGroup,
@@ -43,6 +44,7 @@ function SelectionModal({
           <ResourcePicker
             resources={resources}
             groups={groups}
+            loading={resourcesLoading}
             selectedIds={selectedResourceIds}
             onToggleResource={onToggleResource}
             onToggleGroup={onToggleGroup}
