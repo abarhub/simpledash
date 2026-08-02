@@ -4,3 +4,4 @@ dependency-reduced-pom.xml
 .env.*
 !.env.example
 projects.yml
+scripts.yml
