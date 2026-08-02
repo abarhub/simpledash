@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,12 +50,19 @@ public final class ProjectsConfig {
     private ProjectsConfig() {}
 
     static RawConfig loadFile(Path path) {
-        if (!Files.isRegularFile(path)) {
+        var path2=path;
+        if(Files.notExists(path2)) {
+            var s=System.getProperty("fichierConfig");
+            if(s!=null&&!s.isBlank()) {
+                path2= Paths.get(s);
+            }
+        }
+        if (!Files.isRegularFile(path2)) {
             return EMPTY;
         }
         RawConfig parsed;
         try {
-            parsed = YAML_MAPPER.readValue(path.toFile(), RawConfig.class);
+            parsed = YAML_MAPPER.readValue(path2.toFile(), RawConfig.class);
         } catch (IOException e) {
             throw new RuntimeException("Impossible de lire " + path + ": " + e.getMessage(), e);
         }
