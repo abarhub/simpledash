@@ -29,6 +29,7 @@ function App() {
 
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
   const [refreshingKey, setRefreshingKey] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -44,10 +45,15 @@ function App() {
     setSelectedResourceIds([]);
     setExtractors([]);
     setSelectedExtractorIds([]);
-    fetchResources(domainId).then(({ resources, groups }) => {
-      setResources(resources);
-      setGroups(groups);
-    });
+    setResources([]);
+    setGroups([]);
+    setResourcesLoading(true);
+    fetchResources(domainId)
+      .then(({ resources, groups }) => {
+        setResources(resources);
+        setGroups(groups);
+      })
+      .finally(() => setResourcesLoading(false));
   }, [domainId]);
 
   useEffect(() => {
@@ -129,6 +135,7 @@ function App() {
           onSelectDomain={setDomainId}
           resources={resources}
           groups={groups}
+          resourcesLoading={resourcesLoading}
           selectedResourceIds={selectedResourceIds}
           onToggleResource={toggleResource}
           onToggleGroup={toggleGroup}

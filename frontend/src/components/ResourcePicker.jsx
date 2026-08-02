@@ -1,4 +1,13 @@
-function ResourcePicker({ resources, groups, selectedIds, onToggleResource, onToggleGroup }) {
+function ResourcePicker({ resources, groups, selectedIds, onToggleResource, onToggleGroup, loading }) {
+  if (loading) {
+    return (
+      <div className="picker">
+        <h2>Ressources</h2>
+        <p className="picker-loading">Recherche des ressources en cours...</p>
+      </div>
+    );
+  }
+
   if (resources.length === 0) return null;
 
   return (
