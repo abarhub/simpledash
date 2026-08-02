@@ -1,0 +1,46 @@
+# Copier en scripts.yml (non versionné) et adapter. Absent, le domaine
+# "script" reste vide (pas d'erreur), comme les autres domaines sans config.
+
+# Répertoires sous lesquels api.readFile() (voir plus bas) est autorisé à
+# lire. Vide par défaut : aucun accès fichier tant qu'aucune racine n'est
+# déclarée ici (pas de repli permissif).
+readFileRoots:
+  - D:/projet/simpledash/backend-java/scripts
+
+scripts:
+  # Une ressource = un script, soit écrit inline ('script'), soit référencé
+  # via un chemin vers un .js ('file') — exactement l'un des deux, jamais
+  # les deux ni aucun.
+  - id: exemple-inline
+    name: Exemple (script inline)
+    # Le script doit définir une fonction run(api) qui retourne un objet
+    # avec exactement un de 'data' (clé/valeur) ou 'table' (columns/rows) —
+    # voir les deux exemples ci-dessous.
+    script: |
+      function run(api) {
+        return { data: { statut: "OK", heure: new Date().toISOString() } };
+      }
+
+  - id: exemple-fichier
+    name: Exemple (fichier .js)
+    file: D:/projet/simpledash/backend-java/scripts/exemple.js
+    # Transmis tel quel au script, accessible en JS via api.params.xxx —
+    # permet de réutiliser un seul fichier .js générique pour plusieurs
+    # ressources avec des paramètres différents.
+    params:
+      url: https://example.com/health
+    # Optionnel, délai (en secondes) avant interruption automatique du
+    # script — défaut 10s si absent.
+    timeoutSeconds: 30
+
+# Exemple de fichier exemple.js (au chemin déclaré ci-dessus) :
+#
+# function run(api) {
+#   var body = api.fetch(api.params.url);
+#   return {
+#     table: {
+#       columns: ["Statut"],
+#       rows: [ [ body.length > 0 ? "OK" : "KO" ] ]
+#     }
+#   };
+# }

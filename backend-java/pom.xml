@@ -14,6 +14,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <javalin.version>6.4.0</javalin.version>
     <jackson.version>2.17.1</jackson.version>
+    <rhino.version>1.9.1</rhino.version>
   </properties>
 
   <dependencies>
@@ -36,6 +37,11 @@
       <groupId>com.moandjiezana.toml</groupId>
       <artifactId>toml4j</artifactId>
       <version>0.7.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mozilla</groupId>
+      <artifactId>rhino</artifactId>
+      <version>${rhino.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

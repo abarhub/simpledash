@@ -6,6 +6,7 @@ import com.simpledash.domains.bamboo.BambooDomain;
 import com.simpledash.domains.bitbucket.BitbucketDomain;
 import com.simpledash.domains.jira.JiraDomain;
 import com.simpledash.domains.projects.ProjectsDomain;
+import com.simpledash.domains.script.ScriptDomain;
 import com.simpledash.domains.servers.ServersDomain;
 import com.simpledash.domains.sonar.SonarDomain;
 import com.simpledash.domains.system.SystemDomain;
@@ -32,7 +33,8 @@ public class Main {
             new JiraDomain(),
             new BitbucketDomain(),
             new BambooDomain(),
-            new SonarDomain()
+            new SonarDomain(),
+            new ScriptDomain()
         ));
 
         // Sert le frontend buildé (npm run build côté frontend) s'il existe, pour

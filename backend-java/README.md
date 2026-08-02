@@ -7,12 +7,14 @@ historique (supprimé une fois ce portage terminé) — les notes ci-dessous
 comparent encore ponctuellement aux choix Node d'origine, à titre
 d'explication.
 
-**Statut : les 7 domaines sont portés** (`système`, `serveurs`, `projects`,
-`jira`, `bitbucket`, `bamboo`, `sonar`), `projects` avec
+**Statut : les 7 domaines Node sont portés** (`système`, `serveurs`,
+`projects`, `jira`, `bitbucket`, `bamboo`, `sonar`), `projects` avec
 pom.xml/package.json/Cargo.toml/go.mod/go.work + un extracteur Git
 (dernier commit, branche, statut, avance/retard sur le remote, via
 `ProcessBuilder`). La gestion des credentials (`.env`) est en place pour
-les 4 domaines authentifiés.
+les 4 domaines authentifiés. Un 8ème domaine, `script`, est nouveau (pas
+un portage) : il exécute des scripts JavaScript (Rhino) configurés par
+l'utilisateur — voir section dédiée plus bas.
 
 `ProjectsDomain.listResources()` scanne les racines déclarées dans
 `projects.yml` (voir section dédiée plus bas) à chaque appel, comme côté
@@ -128,6 +130,84 @@ Vérifié en conditions réelles (jar packagé) avec un `projects.yml`
 pointant vers `backend-java/`, `backend/` et `frontend/` de ce repo :
 détection correcte des types (`maven`/`npm`), et filtrage du groupe
 configuré à la seule ressource concernée.
+
+## Scripts personnalisés (`scripts.yml`)
+
+Domaine `script` : chaque ressource configurée est un script JavaScript
+(moteur [Rhino](https://mozilla.github.io/rhino/) 1.9.1, API native
+`org.mozilla.javascript`, pas de wrapper JSR-223 disponible dans ce jar).
+Copie `scripts.yml.example` en `scripts.yml` (non versionné, comme
+`projects.yml`) et adapte :
+
+```yaml
+readFileRoots:
+  - D:/projet/simpledash/backend-java/scripts
+
+scripts:
+  - id: exemple-inline
+    name: Exemple (script inline)
+    script: |
+      function run(api) {
+        return { data: { statut: "OK", heure: new Date().toISOString() } };
+      }
+
+  - id: exemple-fichier
+    name: Exemple (fichier .js)
+    file: D:/projet/simpledash/backend-java/scripts/exemple.js
+    params:
+      url: https://example.com/health
+    timeoutSeconds: 30   # optionnel, défaut 10s
+```
+
+- Une ressource définit **exactement un** de `script` (inline) ou `file`
+  (chemin vers un `.js`), jamais les deux ni aucun — sinon erreur claire
+  au moment de l'exécution (pas au chargement de la config : une
+  ressource mal configurée ne fait jamais échouer les autres).
+- Le script doit définir `function run(api) { ... }` — pas d'exécution
+  "top-level" avec une variable de résultat conventionnelle, pour un
+  message d'erreur systématique et clair si la fonction est absente
+  plutôt qu'un `undefined` silencieux.
+- `run(api)` doit retourner un objet avec **exactement un** de `data`
+  (clé/valeur) ou `table` (`{columns, rows}`, chaque ligne un tableau brut
+  de cellules ou un objet `{cells, url}`) — symétrique avec
+  `ExtractorWidget.data(...)`/`.table(...)` côté Java. `title`/`url`
+  optionnels sur l'objet racine.
+- `api.fetch(url)` fait un GET et renvoie le corps de la réponse en
+  chaîne. `api.readFile(path)` lit un fichier texte, restreint aux
+  répertoires listés dans `readFileRoots` (vide par défaut : aucun accès
+  fichier tant qu'aucune racine n'est déclarée, pas de repli permissif).
+  `api.params.xxx` donne accès aux `params` déclarés sur la ressource
+  (utile pour réutiliser un seul `.js` générique avec des paramètres
+  différents par ressource).
+- Protection contre un script qui ne termine jamais (défaut 10s,
+  réglable par `timeoutSeconds`) : double mécanisme complémentaire — un
+  comptage d'instructions côté Rhino (attrape une boucle JS pure, mode
+  interprété forcé via `setInterpretedMode(true)`, remplaçant l'ancienne
+  `setOptimizationLevel(-1)` dépréciée depuis Rhino 1.8.0) et un timeout
+  externe via `Future` (attrape le cas où le script est bloqué dans un
+  appel Java bloquant comme `api.fetch`, que le comptage d'instructions
+  ne peut pas intercepter).
+- **Piège LiveConnect rencontré et corrigé** : par défaut, Rhino wrappe
+  les `String`/`Number`/`Boolean` renvoyés par un appel Java comme de
+  vrais objets Java (`javaPrimitiveWrap=true` par défaut), exposant leurs
+  méthodes Java plutôt que de se comporter comme des primitives JS —
+  `api.fetch(url).length` renvoyait la méthode Java `length()` au lieu de
+  la longueur de la chaîne. Corrigé via
+  `cx.getWrapFactory().setJavaPrimitiveWrap(false)`, découvert en
+  vérifiant le comportement réel plutôt qu'en supposant la conversion
+  automatique — les tests unitaires seuls ne l'auraient pas détecté (un
+  test de non-régression dédié verrouille maintenant ce comportement).
+  De même, un `java.util.Map` brut n'expose pas ses entrées en accès par
+  point JS (`api.params.xxx` renvoyait `undefined`, seul `.get("xxx")`
+  fonctionnait) — `ScriptRunner` construit donc un vrai objet JS natif
+  (`Context.newObject`) pour `params` plutôt que d'exposer la `Map` Java
+  telle quelle.
+- Vérifié en conditions réelles (jar packagé) : script inline (widget
+  data), script fichier appelant `api.fetch` contre un serveur local
+  réel (widget table), `readFile` refusé hors des `readFileRoots`
+  (`C:/Windows/win.ini`), et un script en boucle infinie interrompu et
+  transformé en widget d'erreur après le délai configuré plutôt que de
+  bloquer indéfiniment la requête.
 
 ## Certificat TLS interne
 
@@ -260,3 +340,11 @@ vérifier après configuration.
   est "falsy", `QualityExtractor` teste la présence de la valeur plutôt
   que sa valeur numérique, pour ne pas afficher "?" sur une couverture ou
   une duplication à 0.
+- **Rhino (`script`)** : `org.mozilla:rhino:1.9.1` — trouvé déjà en cache
+  Maven local, vérifié authentique et fonctionnel (classes
+  `Context`/`Scriptable`/`ScriptableObject` réelles, `Context implements
+  Closeable`) avant de l'adopter. API native Rhino plutôt que `javax.script`
+  (aucun wrapper JSR-223 disponible dans ce jar). Voir la section
+  "Scripts personnalisés" plus haut pour les deux pièges LiveConnect
+  rencontrés (wrapping des primitives, accès aux `Map` par point) et leurs
+  correctifs.
