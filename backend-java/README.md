@@ -1,15 +1,18 @@
 # simpledash-backend (Java / Javalin)
 
-Portage du backend Node (`../backend`) vers Java + [Javalin](https://javalin.io/)
-(fine couche sur Jetty), motivé par le démarrage rapide et la faible
-empreinte mémoire par rapport à un framework plus lourd type Spring Boot.
+Backend en Java + [Javalin](https://javalin.io/) (fine couche sur Jetty),
+motivé par le démarrage rapide et la faible empreinte mémoire par rapport
+à un framework plus lourd type Spring Boot. Portage d'un backend Node
+historique (supprimé une fois ce portage terminé) — les notes ci-dessous
+comparent encore ponctuellement aux choix Node d'origine, à titre
+d'explication.
 
-**Statut : les 7 domaines du backend Node sont portés** (`système`,
-`serveurs`, `projects`, `jira`, `bitbucket`, `bamboo`, `sonar`),
-`projects` avec pom.xml/package.json/Cargo.toml/go.mod/go.work + un
-extracteur Git (dernier commit, branche, statut, avance/retard sur le
-remote, via `ProcessBuilder`). La gestion des credentials (`.env`) est en
-place pour les 4 domaines authentifiés.
+**Statut : les 7 domaines sont portés** (`système`, `serveurs`, `projects`,
+`jira`, `bitbucket`, `bamboo`, `sonar`), `projects` avec
+pom.xml/package.json/Cargo.toml/go.mod/go.work + un extracteur Git
+(dernier commit, branche, statut, avance/retard sur le remote, via
+`ProcessBuilder`). La gestion des credentials (`.env`) est en place pour
+les 4 domaines authentifiés.
 
 `ProjectsDomain.listResources()` scanne les racines déclarées dans
 `projects.yml` (voir section dédiée plus bas) à chaque appel, comme côté
